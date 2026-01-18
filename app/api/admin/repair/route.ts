@@ -4,6 +4,13 @@ import connectDB from "@/mongodb/db";
 import crypto from "crypto";
 
 export async function GET(req: NextRequest) {
+    const searchParams = req.nextUrl.searchParams;
+    const key = searchParams.get("key");
+
+    if (key !== process.env.ADMIN_REPAIR_KEY) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const logsOut: string[] = [];
     try {
         logsOut.push("Resetting Models...");
