@@ -1,12 +1,18 @@
 "use client"
+
 import { motion } from "framer-motion"
-import { CheckCircle2, AlertCircle, Flag, Clock, Download, MoreVertical } from "lucide-react"
+import { CheckCircle2, AlertCircle, Flag, Clock, Download, MoreVertical, ShieldCheck } from "lucide-react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/AuthContext"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
+import { toast } from "sonner"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -24,58 +30,112 @@ const staggerContainer = {
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
+  const { user, mongoUser, logout } = useAuth()
+  const [stats, setStats] = useState({ total: 0, verified: 0, pending: 0, flagged: 0, securityEvents: 0 })
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchStats() {
+      if (!user) return;
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/dashboard/stats?t=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data.stats);
+          setRecentActivity(data.recentActivity);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStats();
+
+    const interval = setInterval(fetchStats, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleExportStats = () => {
+    const doc = new jsPDF()
+    doc.setFontSize(22)
+    doc.text("ProjectForge Performance Report", 14, 20)
+    doc.setFontSize(12)
+    doc.text(`User Index: ${mongoUser?.email || user?.email}`, 14, 32)
+    doc.text(`Report Period: ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`, 14, 40)
+
+    const statsData = [
+      ["Stat Title", "Value", "Description"],
+      ["Total Tasks", stats.total.toString(), "Active tasks this month"],
+      ["Verified Tasks", stats.verified.toString(), "Successfully verified"],
+      ["Security Events", stats.securityEvents.toString(), "Recorded in audit trail"],
+      ["Flagged Tasks", stats.flagged.toString(), "Require attention"]
+    ]
+
+    autoTable(doc, {
+      head: [statsData[0]],
+      body: statsData.slice(1),
+      startY: 50,
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [79, 70, 229] }
+    })
+
+    doc.text("Recent Highlights:", 14, (doc as any).lastAutoTable.finalY + 15)
+
+    const activityRows = recentActivity.slice(0, 5).map(a => [
+      new Date(a.timestamp).toLocaleString(),
+      a.title,
+      a.status
+    ])
+
+    autoTable(doc, {
+      head: [["Timestamp", "Activity", "Result"]],
+      body: activityRows,
+      startY: (doc as any).lastAutoTable.finalY + 20,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [55, 65, 81] }
+    })
+
+    doc.save(`projectforge-stats-${Date.now()}.pdf`)
+    toast.success("Performance report downloaded")
+  }
+
   const overviewCards = [
     {
       title: "Total Tasks",
-      value: "24",
+      value: stats.total.toString(),
       description: "Active tasks this month",
       icon: Clock,
       color: "text-blue-600",
     },
     {
       title: "Verified Tasks",
-      value: "18",
+      value: stats.verified.toString(),
       description: "Successfully verified",
       icon: CheckCircle2,
       color: "text-green-600",
     },
     {
+      title: "Security Events",
+      value: stats.securityEvents || 0,
+      description: "Recorded in audit trail",
+      icon: ShieldCheck,
+      color: "text-blue-600",
+      bgColor: "bg-blue-100",
+    },
+    {
       title: "Flagged Tasks",
-      value: "3",
+      value: stats.flagged.toString(),
       description: "Require attention",
       icon: Flag,
-      color: "text-orange-600",
-    },
-  ]
-
-  const recentActivity = [
-    {
-      title: "Project Setup Complete",
-      description: "Verified and uploaded to audit log",
-      timestamp: "2 hours ago",
-      status: "Verified",
-      statusColor: "bg-green-100 text-green-800",
-    },
-    {
-      title: "Design Mockups Submitted",
-      description: "Waiting for verification",
-      timestamp: "4 hours ago",
-      status: "Pending",
-      statusColor: "bg-blue-100 text-blue-800",
-    },
-    {
-      title: "Code Review Started",
-      description: "Flagged for code quality issues",
-      timestamp: "6 hours ago",
-      status: "Flagged",
-      statusColor: "bg-orange-100 text-orange-800",
-    },
-    {
-      title: "Documentation Updated",
-      description: "Verified and recorded",
-      timestamp: "1 day ago",
-      status: "Verified",
-      statusColor: "bg-green-100 text-green-800",
+      color: "text-red-600",
+      bgColor: "bg-red-100",
     },
   ]
 
@@ -91,7 +151,7 @@ export default function DashboardPage() {
               <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExportStats}>
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>
@@ -101,11 +161,13 @@ export default function DashboardPage() {
                     <MoreVertical className="w-5 h-5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-                  <DropdownMenuItem>Preferences</DropdownMenuItem>
-                  <DropdownMenuItem>Help & Support</DropdownMenuItem>
-                  <DropdownMenuItem>Sign Out</DropdownMenuItem>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => router.push("/dashboard/settings")}>
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={logout}>
+                    Sign Out
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -116,7 +178,7 @@ export default function DashboardPage() {
           <div className="p-6 lg:p-8">
             <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-8">
               {/* Overview Cards */}
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-4 gap-6">
                 {overviewCards.map((card, i) => {
                   const IconComponent = card.icon
                   return (
@@ -138,74 +200,91 @@ export default function DashboardPage() {
                 })}
               </div>
 
-              {/* Recent Activity Section */}
-              <motion.div variants={fadeInUp}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Activity</CardTitle>
-                    <CardDescription>Latest task updates and verification status</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {recentActivity.map((activity, i) => (
-                        <div
-                          key={i}
-                          className="flex items-start gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
-                        >
-                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 mt-1">
-                            {activity.status === "Verified" && <CheckCircle2 className="w-5 h-5 text-green-600" />}
-                            {activity.status === "Pending" && <Clock className="w-5 h-5 text-blue-600" />}
-                            {activity.status === "Flagged" && <AlertCircle className="w-5 h-5 text-orange-600" />}
+              <div className="grid lg:grid-cols-2 gap-8">
+                {/* Recent Activity Section */}
+                <motion.div variants={fadeInUp}>
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle>Recent Activity</CardTitle>
+                      <CardDescription>Latest task updates and verification status</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {loading ? (
+                          <div className="flex items-center justify-center py-10">
+                            <Clock className="w-6 h-6 animate-spin text-muted-foreground" />
                           </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-foreground">{activity.title}</h4>
-                            <p className="text-sm text-foreground/60 mt-1">{activity.description}</p>
-                            <div className="flex items-center gap-3 mt-2">
-                              <Badge className={activity.statusColor}>{activity.status}</Badge>
-                              <span className="text-xs text-foreground/50">{activity.timestamp}</span>
+                        ) : recentActivity.length > 0 ? (
+                          recentActivity.map((item, i) => (
+                            <div key={i} className="flex gap-4 group">
+                              <div className="mt-1">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <Clock className="w-4 h-4 text-primary" />
+                                </div>
+                              </div>
+                              <div className="flex-1 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                                    {item.title}
+                                  </p>
+                                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-secondary text-muted-foreground uppercase">
+                                    {item.status}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-muted-foreground line-clamp-1">{item.description}</p>
+                                <p className="text-[10px] text-muted-foreground/60">
+                                  {new Date(item.timestamp).toLocaleString()}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                          ))
+                        ) : (
+                          <div className="text-center py-10 opacity-50">No activity yet</div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-              {/* Task Status Indicators */}
-              <motion.div variants={fadeInUp}>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Task Status Overview</CardTitle>
-                    <CardDescription>Breakdown of current task verification states</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid md:grid-cols-3 gap-6">
-                      <div className="text-center">
-                        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mb-3">
-                          <span className="text-2xl font-bold text-green-700">75%</span>
-                        </div>
-                        <h4 className="font-semibold text-foreground">Verified</h4>
-                        <p className="text-sm text-foreground/60 mt-1">18 of 24 tasks</p>
+                {/* Task Status Breakdown */}
+                <motion.div variants={fadeInUp}>
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle>Task Status Overview</CardTitle>
+                      <CardDescription>Breakdown of current task verification states</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {[
+                          { label: "Verified", value: stats.verified, total: stats.total, color: "bg-green-600" },
+                          { label: "Pending", value: stats.pending, total: stats.total, color: "bg-blue-600" },
+                          { label: "Flagged", value: stats.flagged, total: stats.total, color: "bg-red-600" },
+                        ].map((status, i) => {
+                          const percentage = status.total > 0 ? (status.value / status.total) * 100 : 0
+                          return (
+                            <div key={i} className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="font-medium">{status.label}</span>
+                                <span className="text-muted-foreground">
+                                  {status.value} of {status.total} tasks ({Math.round(percentage)}%)
+                                </span>
+                              </div>
+                              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${percentage}%` }}
+                                  transition={{ duration: 1, delay: 0.5 }}
+                                  className={`h-full ${status.color}`}
+                                />
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
-                      <div className="text-center">
-                        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mb-3">
-                          <span className="text-2xl font-bold text-blue-700">17%</span>
-                        </div>
-                        <h4 className="font-semibold text-foreground">Pending</h4>
-                        <p className="text-sm text-foreground/60 mt-1">4 of 24 tasks</p>
-                      </div>
-                      <div className="text-center">
-                        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center mb-3">
-                          <span className="text-2xl font-bold text-orange-700">8%</span>
-                        </div>
-                        <h4 className="font-semibold text-foreground">Flagged</h4>
-                        <p className="text-sm text-foreground/60 mt-1">2 of 24 tasks</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </div>
             </motion.div>
           </div>
         </main>

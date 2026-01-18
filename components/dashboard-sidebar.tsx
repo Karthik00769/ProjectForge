@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import { useAuth } from "@/contexts/AuthContext"
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +35,16 @@ export function DashboardSidebar() {
     return pathname.startsWith(href)
   }
 
+  const { user, mongoUser } = useAuth()
+  const displayName = mongoUser?.displayName || user?.displayName || "User"
+  const email = mongoUser?.email || user?.email || ""
+  const initials = displayName
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase()
+
   return (
     <Sidebar>
       <SidebarHeader>
@@ -59,12 +70,12 @@ export function DashboardSidebar() {
         <SidebarSeparator />
         <div className="flex items-center gap-2 px-2 py-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="https://github.com/shadcn.png" alt="User" />
-            <AvatarFallback>JD</AvatarFallback>
+            <AvatarImage src={user?.photoURL || undefined} alt={displayName} />
+            <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">John Doe</p>
-            <p className="text-xs text-foreground/60 truncate">john@example.com</p>
+            <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+            <p className="text-xs text-foreground/60 truncate">{email}</p>
           </div>
         </div>
       </SidebarFooter>

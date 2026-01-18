@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
 import { motion } from "framer-motion"
-import { CheckCircle2, Clock, AlertCircle, Filter, Search } from "lucide-react"
+import { CheckCircle2, Clock, AlertCircle, Filter, Search, Sparkles, Loader2 } from "lucide-react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Progress } from "@/components/ui/progress"
+// Dialog imports
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -30,76 +35,40 @@ const staggerContainer = {
 
 export default function MyTasksContent() {
   const router = useRouter()
+  const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [tasks, setTasks] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const tasks = [
-    {
-      id: 1,
-      title: "API Integration Setup",
-      description: "Set up REST API endpoints for user authentication",
-      status: "completed",
-      dueDate: "2025-02-15",
-      completionDate: "2025-02-10",
-      proofType: "PDF",
-      template: "Professional Services",
-      completedSteps: 3,
-      totalSteps: 3,
-    },
-    {
-      id: 2,
-      title: "Design System v2",
-      description: "Complete redesign of component library",
-      status: "in-progress",
-      dueDate: "2025-02-20",
-      completionDate: null,
-      proofType: "Image",
-      template: "Skilled Worker",
-      completedSteps: 1,
-      totalSteps: 3,
-    },
-    {
-      id: 3,
-      title: "Database Optimization",
-      description: "Optimize query performance and indexing",
-      status: "in-progress",
-      dueDate: "2025-02-25",
-      completionDate: null,
-      proofType: null,
-      template: "Professional Services",
-      completedSteps: 0,
-      totalSteps: 3,
-    },
-    {
-      id: 4,
-      title: "Security Audit",
-      description: "Complete security assessment of codebase",
-      status: "completed",
-      dueDate: "2025-02-05",
-      completionDate: "2025-02-06",
-      proofType: "Document",
-      template: "Professional Services",
-      completedSteps: 3,
-      totalSteps: 3,
-    },
-    {
-      id: 5,
-      title: "Testing Framework Setup",
-      description: "Configure Jest and Cypress for testing",
-      status: "completed",
-      dueDate: "2025-02-12",
-      completionDate: "2025-02-12",
-      proofType: "Document",
-      template: "Business Operations",
-      completedSteps: 3,
-      totalSteps: 3,
-    },
-  ]
+  useEffect(() => {
+    async function fetchTasks() {
+      if (!user) return;
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/tasks", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Map API data if necessary or just use directly.
+          // Our API returns Task[] which has steps[].
+          // We need to calculate completedSteps on the fly.
+          setTasks(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTasks();
+  }, [user]);
 
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =
-      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchQuery.toLowerCase())
+      (task.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (task.description || "").toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === "all" || task.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -134,7 +103,7 @@ export default function MyTasksContent() {
     }
   }
 
-  const handleViewDetails = (taskId: number) => {
+  const handleViewDetails = (taskId: string) => {
     router.push(`/dashboard/tasks/${taskId}`)
   }
 
@@ -195,10 +164,12 @@ export default function MyTasksContent() {
                 {filteredTasks.length > 0 ? (
                   <div className="grid gap-4">
                     {filteredTasks.map((task, index) => {
-                      const progressPercentage = Math.round((task.completedSteps / task.totalSteps) * 100)
+                      const completedCount = task.steps ? task.steps.filter((s: any) => s.status === 'completed').length : 0;
+                      const totalCount = task.steps ? task.steps.length : 0;
+                      const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
                       return (
-                        <motion.div key={task.id} variants={fadeInUp}>
+                        <motion.div key={task._id || task.id} variants={fadeInUp}>
                           <Card className="hover:shadow-lg transition-shadow">
                             <CardContent className="pt-6">
                               <div className="space-y-4">
@@ -219,7 +190,7 @@ export default function MyTasksContent() {
                                   <div className="flex items-center justify-between">
                                     <p className="text-xs font-medium text-muted-foreground">Progress</p>
                                     <p className="text-xs font-semibold text-foreground">
-                                      {task.completedSteps}/{task.totalSteps} steps
+                                      {completedCount}/{totalCount} steps
                                     </p>
                                   </div>
                                   <Progress value={progressPercentage} className="h-2" />
@@ -229,21 +200,24 @@ export default function MyTasksContent() {
                                 <div className="grid md:grid-cols-4 gap-4 pt-4 border-t border-border">
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">Template</p>
-                                    <p className="text-sm font-medium text-foreground">{task.template}</p>
+                                    <p className="text-sm font-medium text-foreground">Standard Workflow</p>
+                                    {/* We didn't store template name in Task, only ID. Future improvement: Populate */}
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">Due Date</p>
-                                    <p className="text-sm font-medium text-foreground">{task.dueDate}</p>
+                                    <p className="text-sm font-medium text-foreground">
+                                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "—"}
+                                    </p>
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">Completion</p>
                                     <p className="text-sm font-medium text-foreground">
-                                      {task.completionDate || "In Progress"}
+                                      {task.completionDate ? new Date(task.completionDate).toLocaleDateString() : "In Progress"}
                                     </p>
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground mb-1">Proof Type</p>
-                                    <p className="text-sm font-medium text-foreground">{task.proofType || "—"}</p>
+                                    <p className="text-sm font-medium text-foreground">Digital</p>
                                   </div>
                                 </div>
 
@@ -251,7 +225,7 @@ export default function MyTasksContent() {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleViewDetails(task.id)}
+                                    onClick={() => handleViewDetails(task._id)}
                                     className="flex-1"
                                   >
                                     View Details

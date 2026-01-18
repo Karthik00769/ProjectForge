@@ -44,9 +44,6 @@ export default function Home() {
             </a>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/auth/sign-in" className="text-foreground/70 hover:text-foreground transition font-medium">
-              Sign In
-            </Link>
             <Link
               href="/auth/sign-up"
               className="px-6 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition font-medium"

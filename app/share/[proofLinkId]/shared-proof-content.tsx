@@ -7,80 +7,54 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
+import { useState, useEffect } from "react"
+
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.5 },
 }
 
-// Mock shared proof data
-const sharedProofDataMap: Record<string, any> = {
-  "1a2b3c4d5e6f7g8h": {
-    taskId: "1",
-    taskTitle: "API Integration Setup",
-    taskDescription: "Set up REST API endpoints for user authentication with OAuth2 support",
-    templateName: "Professional Services",
-    status: "completed",
-    completionDate: "2025-02-10",
-    integrityScore: 98,
-    verifiedAt: "2025-02-10T15:45:00Z",
-    steps: [
-      {
-        id: "step-1",
-        name: "Planning & Design",
-        status: "completed",
-        uploadedFile: "api-plan.pdf",
-        uploadedDate: "2025-02-08",
-      },
-      {
-        id: "step-2",
-        name: "API Development",
-        status: "completed",
-        uploadedFile: "api-code.pdf",
-        uploadedDate: "2025-02-09",
-      },
-      {
-        id: "step-3",
-        name: "Testing & Validation",
-        status: "completed",
-        uploadedFile: "test-report.pdf",
-        uploadedDate: "2025-02-10",
-      },
-    ],
-    auditEntries: [
-      {
-        id: "audit-001",
-        action: "task_verified",
-        taskName: "API Integration Setup",
-        stepName: "Testing & Validation",
-        proofType: "pdf",
-        proofHash: "sha256_a1b2c3d4e5f6g7h8",
-        timestamp: "2025-02-10T15:35:00Z",
-        integrityStatus: "verified",
-      },
-      {
-        id: "audit-002",
-        action: "task_verified",
-        taskName: "API Integration Setup",
-        stepName: "API Development",
-        proofType: "pdf",
-        proofHash: "sha256_i9j0k1l2m3n4o5p6",
-        timestamp: "2025-02-09T16:20:00Z",
-        integrityStatus: "verified",
-      },
-    ],
-  },
-}
-
 export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
-  const proofData = sharedProofDataMap[proofLinkId]
+  const [proofData, setProofData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  if (!proofData) {
+  useEffect(() => {
+    async function fetchProof() {
+      try {
+        const res = await fetch(`/api/public/proof/${proofLinkId}`);
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || "Failed to load proof");
+        }
+        const data = await res.json();
+        setProofData(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProof();
+  }, [proofLinkId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (error || !proofData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Proof link not found or has expired.</p>
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center">
+            <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Access Denied / Not Found</h3>
+            <p className="text-muted-foreground">{error || "This proof link is invalid or private."}</p>
           </CardContent>
         </Card>
       </div>
@@ -88,6 +62,7 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
   }
 
   const formatTimestamp = (isoString: string): string => {
+    if (!isoString) return "Pending"
     const date = new Date(isoString)
     return date.toLocaleString("en-US", {
       year: "numeric",

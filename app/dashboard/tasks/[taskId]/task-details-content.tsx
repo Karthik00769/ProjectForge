@@ -2,7 +2,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { ArrowLeft, CheckCircle2, Clock, FileText, Upload, X, Copy, Share2, Lock, Globe, Mail } from "lucide-react"
+import { toast } from "sonner"
+import { ArrowLeft, CheckCircle2, Clock, FileText, Upload, X, Copy, Share2, Lock, Globe, Mail, Sparkles } from "lucide-react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
@@ -18,156 +19,170 @@ const fadeInUp = {
   transition: { duration: 0.5 },
 }
 
-// Mock task data keyed by taskId
-const taskDataMap: Record<string, any> = {
-  "1": {
-    id: 1,
-    title: "API Integration Setup",
-    description: "Set up REST API endpoints for user authentication with OAuth2 support",
-    templateId: "professional-services", // Map to template
-    status: "completed",
-    dueDate: "2025-02-15",
-    completionDate: "2025-02-10",
-    steps: [
-      {
-        id: "step-1",
-        name: "Planning & Design",
-        status: "completed",
-        uploadedFile: "api-plan.pdf",
-        uploadedDate: "2025-02-08",
-      },
-      {
-        id: "step-2",
-        name: "API Development",
-        status: "completed",
-        uploadedFile: "api-code.pdf",
-        uploadedDate: "2025-02-09",
-      },
-      {
-        id: "step-3",
-        name: "Testing & Validation",
-        status: "completed",
-        uploadedFile: "test-report.pdf",
-        uploadedDate: "2025-02-10",
-      },
-    ],
-  },
-  "2": {
-    id: 2,
-    title: "Design System v2",
-    description: "Complete redesign of component library",
-    templateId: "skilled-worker",
-    status: "in-progress",
-    dueDate: "2025-02-20",
-    completionDate: null,
-    steps: [
-      {
-        id: "step-1",
-        name: "Design Phase",
-        status: "completed",
-        uploadedFile: "designs.zip",
-        uploadedDate: "2025-02-09",
-      },
-      { id: "step-2", name: "Component Development", status: "in-progress", uploadedFile: null, uploadedDate: null },
-      { id: "step-3", name: "Testing & QA", status: "pending", uploadedFile: null, uploadedDate: null },
-    ],
-  },
-  "3": {
-    id: 3,
-    title: "Database Optimization",
-    description: "Optimize query performance",
-    templateId: "professional-services",
-    status: "in-progress",
-    dueDate: "2025-02-25",
-    completionDate: null,
-    steps: [
-      { id: "step-1", name: "Analysis", status: "pending", uploadedFile: null, uploadedDate: null },
-      { id: "step-2", name: "Implementation", status: "pending", uploadedFile: null, uploadedDate: null },
-      { id: "step-3", name: "Verification", status: "pending", uploadedFile: null, uploadedDate: null },
-    ],
-  },
-  "4": {
-    id: 4,
-    title: "Security Audit",
-    description: "Complete security assessment",
-    templateId: "professional-services",
-    status: "completed",
-    dueDate: "2025-02-05",
-    completionDate: "2025-02-06",
-    steps: [
-      {
-        id: "step-1",
-        name: "Vulnerability Scan",
-        status: "completed",
-        uploadedFile: "scan-results.pdf",
-        uploadedDate: "2025-02-05",
-      },
-      {
-        id: "step-2",
-        name: "Penetration Testing",
-        status: "completed",
-        uploadedFile: "pentest-report.pdf",
-        uploadedDate: "2025-02-06",
-      },
-      {
-        id: "step-3",
-        name: "Report Generation",
-        status: "completed",
-        uploadedFile: "security-audit.pdf",
-        uploadedDate: "2025-02-06",
-      },
-    ],
-  },
-  "5": {
-    id: 5,
-    title: "Testing Framework Setup",
-    description: "Configure Jest and Cypress",
-    templateId: "business-operations",
-    status: "completed",
-    dueDate: "2025-02-12",
-    completionDate: "2025-02-12",
-    steps: [
-      {
-        id: "step-1",
-        name: "Jest Configuration",
-        status: "completed",
-        uploadedFile: "jest-config.pdf",
-        uploadedDate: "2025-02-11",
-      },
-      {
-        id: "step-2",
-        name: "Cypress Setup",
-        status: "completed",
-        uploadedFile: "cypress-config.pdf",
-        uploadedDate: "2025-02-12",
-      },
-      {
-        id: "step-3",
-        name: "Documentation",
-        status: "completed",
-        uploadedFile: "testing-guide.pdf",
-        uploadedDate: "2025-02-12",
-      },
-    ],
-  },
+import { auth } from "@/lib/firebase"
+
+// Helper to format date
+const formatDate = (dateString?: string | Date) => {
+  if (!dateString) return "—"
+  return new Date(dateString).toLocaleDateString()
 }
+
+import { useEffect } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 
 export function TaskDetailsContent({ taskId }: { taskId: string }) {
   const router = useRouter()
-  const task = taskDataMap[taskId]
+  const { user } = useAuth()
+  const [task, setTask] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
   const [uploadingSteps, setUploadingSteps] = useState<Record<string, File | null>>({})
+  const [isUploading, setIsUploading] = useState(false)
   const [proofLinkVisibility, setProofLinkVisibility] = useState<"private" | "restricted" | "public">("private")
   const [restrictedEmails, setRestrictedEmails] = useState("")
-  const [proofLinkId] = useState(() => {
-    // Generate a unique proof link for completed tasks
-    if (task && task.status === "completed") {
-      return Math.random().toString(36).substr(2, 16)
-    }
-    return null
-  })
+  // const [proofLinkId] = useState(() => {
+  //   // Generate a unique proof link for completed tasks
+  //   if (task && task.status === "completed") {
+  //     return Math.random().toString(36).substr(2, 16)
+  //   }
+  //   return null
+  // })
+  // For now use mock ID or future ProofLink ID
+  const [proofLinkId, setProofLinkId] = useState<string | null>(null);
   const proofShareUrl = proofLinkId
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/share/${proofLinkId}`
     : ""
+
+  useEffect(() => {
+    async function fetchTaskAndLink() {
+      if (!user) return;
+      try {
+        const token = await user.getIdToken();
+
+        // 1. Fetch Task
+        const resTask = await fetch(`/api/tasks/${taskId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (resTask.ok) {
+          const data = await resTask.json();
+          setTask(data);
+
+          // 2. If task completed, fetch Proof Link
+          // We fetch it regardless of status if we want to be safe, but it likely only exists if completed.
+          // However, user might view a task that WAS completed.
+          // Let's fetch it always to be robust. 
+          const resLink = await fetch(`/api/tasks/${taskId}/share`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+
+          if (resLink.ok) {
+            const linkData = await resLink.json();
+            // If link exists (isActive/created), populate state
+            if (linkData && linkData._id) {
+              setProofLinkId(linkData._id || null);
+              setProofLinkVisibility(linkData.visibility || 'private');
+              if (linkData.allowedEmails) {
+                setRestrictedEmails(linkData.allowedEmails.join(', '));
+              }
+            }
+          }
+        } else {
+          console.error("Failed to fetch task");
+          setTask(null);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchTaskAndLink();
+  }, [taskId, user]);
+
+  // Function to save share settings
+  const updateShareSettings = async (visibility: string, emails: string) => {
+    if (!user) return;
+    try {
+      const emailList = emails.split(',').map(e => e.trim()).filter(e => e);
+      const token = await user.getIdToken();
+      await fetch(`/api/tasks/${taskId}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          visibility,
+          allowedEmails: emailList
+        })
+      });
+      toast.success("Share settings updated");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update share settings");
+    }
+  };
+
+  // Also update when restricted emails input loses focus
+  const handleEmailBlur = () => {
+    updateShareSettings(proofLinkVisibility, restrictedEmails);
+  };
+
+  const handleFileSelect = (stepId: string, file: File) => {
+    setUploadingSteps((prev) => ({ ...prev, [stepId]: file }))
+  }
+
+  const handleUploadSubmit = async (stepId: string) => {
+    const file = uploadingSteps[stepId];
+    if (!file || !user) return;
+
+    setIsUploading(true);
+    try {
+      const token = await user.getIdToken();
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`/api/tasks/${taskId}/steps/${stepId}/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (res.ok) {
+        // Refresh task data
+        const updatedTaskRes = await fetch(`/api/tasks/${taskId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const updatedTask = await updatedTaskRes.json();
+        setTask(updatedTask);
+        // Clear upload state
+        setUploadingSteps((prev) => {
+          const newState = { ...prev };
+          delete newState[stepId];
+          return newState;
+        });
+      } else {
+        alert("Upload failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error uploading file");
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <SidebarProvider>
+        <DashboardSidebar />
+        <SidebarInset>
+          <div className="flex items-center justify-center h-full">
+            <p>Loading task details...</p>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    )
+  }
 
   if (!task) {
     return (
@@ -242,9 +257,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
   const totalSteps = task.steps.length
   const progressPercentage = Math.round((completedSteps / totalSteps) * 100)
 
-  const handleStepUpload = (stepId: string, file: File) => {
-    setUploadingSteps((prev) => ({ ...prev, [stepId]: file }))
-  }
+  // Removed old handleStepUpload in favor of handleFileSelect and handleUploadSubmit
 
   const handleRemoveUpload = (stepId: string) => {
     setUploadingSteps((prev) => {
@@ -317,7 +330,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Completion Date</p>
-                          <p className="text-sm font-medium text-foreground">{task.completionDate || "—"}</p>
+                          <p className="text-sm font-medium text-foreground">{formatDate(task.completionDate)}</p>
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Total Steps</p>
@@ -345,14 +358,26 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                   <CardContent>
                     <div className="space-y-4">
                       {task.steps.map((step: any, index: number) => (
-                        <div key={step.id} className="border border-border rounded-lg p-4">
+                        <div key={step.stepId || step.id} className="border border-border rounded-lg p-4">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-start gap-3 flex-1">
                               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
                                 {index + 1}
                               </div>
                               <div className="flex-1">
-                                <h4 className="font-semibold text-foreground">{step.name}</h4>
+                                {/* Use template data logic if name is missing in task steps? Ideally backend populated it. 
+                                    Our Task model has steps with stepId vs name. 
+                                    Wait, the Task model steps array only had { stepId, status, proofId }. 
+                                    We need to ideally Populate step details from Template or store them in Task.
+                                    For now, we might be missing step names if we didn't store them in Task.
+                                    Let's check Route.ts -> "const taskSteps = template.steps.map(...)".
+                                    The created task in DB only has stepId. 
+                                    We should probably store 'name' in Task steps to avoid double lookups or populate.
+                                    Assumption: Backend now returns enriched steps or we need to fix backend? 
+                                    Let's assume for now we might see "Step {index+1}" if name missing, 
+                                    BUT we should fix backend to store name. 
+                                    For this step, let's use step.stepId as fallback. */}
+                                <h4 className="font-semibold text-foreground">{step.name || `Step ${index + 1}`}</h4>
                                 <div className="flex items-center gap-2 mt-1">{getStepStatusBadge(step.status)}</div>
                               </div>
                             </div>
@@ -364,23 +389,33 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                 <div className="flex items-center gap-3">
                                   <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-green-900">{step.uploadedFile}</p>
-                                    <p className="text-xs text-green-700">Uploaded on {step.uploadedDate}</p>
+                                    <p className="text-sm font-medium text-green-900">Proof Uploaded</p>
+                                    <p className="text-xs text-green-700">Uploaded on {formatDate(step.uploadedAt)}</p>
+                                    {/* AI Verification Badge */}
+                                    {step.extractedText && (
+                                      <div className="mt-2 text-xs bg-white/50 p-2 rounded border border-green-100 text-green-800">
+                                        <span className="font-semibold flex items-center gap-1">
+                                          <Sparkles className="w-3 h-3" />
+                                          AI Extracted Text:
+                                        </span>
+                                        <p className="line-clamp-3 mt-1 italic">{step.extractedText}</p>
+                                      </div>
+                                    )}
                                   </div>
                                   <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
                                 </div>
                               </div>
                             ) : (
                               <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
-                                {uploadingSteps[step.id] ? (
+                                {uploadingSteps[step.stepId] ? (
                                   <div className="space-y-2">
                                     <p className="text-sm font-medium text-foreground">
-                                      {uploadingSteps[step.id]!.name}
+                                      {uploadingSteps[step.stepId]!.name}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      {(uploadingSteps[step.id]!.size / 1024).toFixed(2)} KB
+                                      {(uploadingSteps[step.stepId]!.size / 1024).toFixed(2)} KB
                                     </p>
-                                    <Button variant="outline" size="sm" onClick={() => handleRemoveUpload(step.id)}>
+                                    <Button variant="outline" size="sm" onClick={() => handleRemoveUpload(step.stepId)}>
                                       <X className="w-4 h-4 mr-1" />
                                       Remove
                                     </Button>
@@ -395,16 +430,16 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                       accept=".pdf,image/*"
                                       onChange={(e) => {
                                         if (e.target.files?.[0]) {
-                                          handleStepUpload(step.id, e.target.files[0])
+                                          handleFileSelect(step.stepId, e.target.files[0])
                                         }
                                       }}
                                       className="hidden"
-                                      id={`upload-${step.id}`}
+                                      id={`upload-${step.stepId}`}
                                     />
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => document.getElementById(`upload-${step.id}`)?.click()}
+                                      onClick={() => document.getElementById(`upload-${step.stepId}`)?.click()}
                                     >
                                       <Upload className="w-4 h-4 mr-1" />
                                       Select File
@@ -414,9 +449,9 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                               </div>
                             )}
 
-                            {step.status !== "completed" && uploadingSteps[step.id] && (
-                              <Button className="w-full" size="sm">
-                                Mark Step Complete
+                            {step.status !== "completed" && uploadingSteps[step.stepId] && (
+                              <Button className="w-full" size="sm" onClick={() => handleUploadSubmit(step.stepId)} disabled={isUploading}>
+                                {isUploading ? "Uploading..." : "Mark Step Complete"}
                               </Button>
                             )}
                           </div>
@@ -468,7 +503,11 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                         <label className="text-sm font-medium text-foreground">Link Visibility</label>
                         <Select
                           value={proofLinkVisibility}
-                          onValueChange={(value: any) => setProofLinkVisibility(value)}
+                          onValueChange={(value: "private" | "restricted" | "public") => {
+                            setProofLinkVisibility(value);
+                            // Auto-save changes
+                            updateShareSettings(value, restrictedEmails);
+                          }}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -504,6 +543,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                             placeholder="Enter emails separated by commas"
                             value={restrictedEmails}
                             onChange={(e) => setRestrictedEmails(e.target.value)}
+                            onBlur={handleEmailBlur}
                           />
                           <p className="text-xs text-muted-foreground">e.g., client@company.com, manager@company.com</p>
                         </div>

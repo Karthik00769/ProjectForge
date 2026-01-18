@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { TEMPLATES, TEMPLATE_CATEGORIES } from "./template-config"
 
+import { useAuth } from "@/contexts/AuthContext"
+import { useState } from "react"
+
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -26,6 +29,8 @@ const staggerContainer = {
 
 export default function TemplatesPage() {
   const router = useRouter()
+  // We keep useAuth/useState if we want to add features later, but for now reverting to static view
+  const { user } = useAuth()
 
   const handleUseTemplate = (templateId: string) => {
     router.push(`/dashboard/templates/${templateId}`)
@@ -67,7 +72,7 @@ export default function TemplatesPage() {
               </motion.div>
 
               {/* Template Categories */}
-              {groupedTemplates.map((category, categoryIndex) => {
+              {groupedTemplates.map((category: any, categoryIndex) => {
                 const IconComponent = category.icon === "Briefcase" ? Briefcase : Zap
                 return (
                   <motion.div key={categoryIndex} variants={fadeInUp} className="space-y-6">
@@ -84,8 +89,8 @@ export default function TemplatesPage() {
 
                     {/* Template Cards */}
                     <div className="grid md:grid-cols-3 gap-6">
-                      {category.templates.map((template) => (
-                        <motion.div key={template.id} variants={fadeInUp}>
+                      {category.templates.map((template: any) => (
+                        <motion.div key={template._id || template.id} variants={fadeInUp}>
                           <Card className="h-full hover:shadow-lg transition-shadow flex flex-col">
                             <CardHeader>
                               <CardTitle className="text-lg">{template.name}</CardTitle>
@@ -99,8 +104,8 @@ export default function TemplatesPage() {
                                   Predefined Steps
                                 </p>
                                 <div className="space-y-2">
-                                  {template.steps.slice(0, 3).map((step) => (
-                                    <div key={step.id} className="flex items-center gap-2">
+                                  {template.steps.slice(0, 3).map((step: any) => (
+                                    <div key={step.id || step.name} className="flex items-center gap-2">
                                       <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
                                       <span className="text-sm text-foreground">{step.name}</span>
                                     </div>

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 import { motion } from "framer-motion"
 import { AlertTriangle, Search, Download, CheckCircle2, AlertCircle, Clock } from "lucide-react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
@@ -11,7 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import type { AuditLogEntry } from "@/lib/audit-types"
+import jsPDF from "jspdf"
+import autoTable from "jspdf-autotable"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -21,136 +23,53 @@ const fadeInUp = {
 
 export default function AuditLogsContent() {
   const [searchQuery, setSearchQuery] = useState("")
-  const currentUserId = "user-123" // In production, get from auth context
+  const { user } = useAuth()
+  const [auditEntries, setAuditEntries] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const auditEntries: AuditLogEntry[] = [
-    {
-      id: "audit-001",
-      userId: currentUserId,
-      action: "task_verified",
-      taskId: "1",
-      taskName: "API Integration Setup",
-      stepId: "step-3",
-      stepName: "Testing & Validation",
-      proofType: "pdf",
-      proofHash: "sha256_a1b2c3d4e5f6g7h8",
-      fileMetadata: {
-        name: "test-report.pdf",
-        size: 245000,
-        type: "application/pdf",
-        uploadedDate: "2025-02-10T15:30:00Z",
-      },
-      timestamp: "2025-02-10T15:35:00Z",
-      integrityStatus: "verified",
-      integrityCheckDetails: {
-        hashMatch: true,
-        metadataValid: true,
-        aiValidationResult: true,
-      },
-      readonly: true,
-    },
-    {
-      id: "audit-002",
-      userId: currentUserId,
-      action: "file_uploaded",
-      taskId: "2",
-      taskName: "Design System v2",
-      stepId: "step-1",
-      stepName: "Design Phase",
-      proofType: "photo",
-      proofHash: "sha256_i9j0k1l2m3n4o5p6",
-      fileMetadata: {
-        name: "designs.zip",
-        size: 1245000,
-        type: "application/zip",
-        uploadedDate: "2025-02-09T14:20:00Z",
-      },
-      timestamp: "2025-02-09T14:22:00Z",
-      integrityStatus: "pending",
-      integrityCheckDetails: {
-        hashMatch: true,
-        metadataValid: true,
-      },
-      readonly: true,
-    },
-    {
-      id: "audit-003",
-      userId: currentUserId,
-      action: "task_verified",
-      taskId: "5",
-      taskName: "Testing Framework Setup",
-      stepId: "step-3",
-      stepName: "Documentation",
-      proofType: "pdf",
-      proofHash: "sha256_q7r8s9t0u1v2w3x4",
-      fileMetadata: {
-        name: "testing-guide.pdf",
-        size: 567000,
-        type: "application/pdf",
-        uploadedDate: "2025-02-12T10:15:00Z",
-      },
-      timestamp: "2025-02-12T10:18:00Z",
-      integrityStatus: "verified",
-      integrityCheckDetails: {
-        hashMatch: true,
-        metadataValid: true,
-        aiValidationResult: true,
-      },
-      readonly: true,
-    },
-    {
-      id: "audit-004",
-      userId: currentUserId,
-      action: "verification_started",
-      taskId: "3",
-      taskName: "Database Optimization",
-      stepId: "step-1",
-      stepName: "Analysis",
-      proofType: "pdf",
-      timestamp: "2025-02-08T09:45:00Z",
-      integrityStatus: "pending",
-      integrityCheckDetails: {
-        hashMatch: false,
-        metadataValid: true,
-      },
-      readonly: true,
-    },
-    {
-      id: "audit-005",
-      userId: currentUserId,
-      action: "task_flagged",
-      taskId: "4",
-      taskName: "Security Audit",
-      stepId: "step-2",
-      stepName: "Penetration Testing",
-      proofType: "pdf",
-      proofHash: "sha256_y5z6a7b8c9d0e1f2",
-      fileMetadata: {
-        name: "pentest-report.pdf",
-        size: 890000,
-        type: "application/pdf",
-        uploadedDate: "2025-02-06T16:30:00Z",
-      },
-      timestamp: "2025-02-06T16:35:00Z",
-      integrityStatus: "flagged",
-      integrityCheckDetails: {
-        hashMatch: false,
-        metadataValid: true,
-        aiValidationResult: false,
-      },
-      readonly: true,
-    },
-  ]
+  useEffect(() => {
+    async function fetchLogs() {
+      if (!user) return;
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/audit-logs?t=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAuditEntries(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch logs", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const filteredEntries = auditEntries.filter((entry) => {
-    const matchesSearch =
-      entry.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.taskName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (entry.stepName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-    return matchesSearch
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      (entry.action?.toLowerCase() || "").includes(searchLower) ||
+      (entry.details?.toLowerCase() || "").includes(searchLower) ||
+      (typeof entry.metadata?.taskName === 'string' && entry.metadata.taskName.toLowerCase().includes(searchLower))
+    )
   })
 
-  const tamperedCount = auditEntries.filter((e) => e.integrityStatus === "flagged").length
+  const verifiedCount = auditEntries.filter(e =>
+    e.action?.includes('VERIFIED') ||
+    e.action?.includes('COMPLETED') ||
+    e.metadata?.integrityCheckDetails?.hashMatch === true
+  ).length;
+
+  const flaggedCount = auditEntries.filter(e =>
+    e.action?.includes('FLAGGED') ||
+    e.integrityStatus === 'flagged' ||
+    e.metadata?.integrityCheckDetails?.hashMatch === false
+  ).length;
 
   const formatTimestamp = (isoString: string): string => {
     const date = new Date(isoString)
@@ -164,6 +83,45 @@ export default function AuditLogsContent() {
     })
   }
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+
+    // Title
+    doc.setFontSize(18);
+    doc.text("Audit Logs Report", 14, 22);
+
+    // Metadata
+    doc.setFontSize(11);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30);
+    doc.text(`Total Entries: ${filteredEntries.length}`, 14, 36);
+
+    // Table Data
+    const tableColumn = ["Timestamp", "Action", "Details", "Proof Hash", "Integrity"];
+    const tableRows = filteredEntries.map(entry => [
+      new Date(entry.timestamp).toLocaleString(),
+      (entry.action || "").replace(/_/g, " "),
+      entry.details || "",
+      entry.metadata?.fileHash
+        ? String(entry.metadata.fileHash).substring(0, 16) + "..."
+        : entry.entryHash
+          ? String(entry.entryHash).substring(0, 16) + "..."
+          : "System",
+      entry.metadata?.fileHash ? "File Secured" : entry.entryHash ? "Signed" : "Logged"
+    ]);
+
+    // Generate Table
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 44,
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [22, 163, 74] }, // Green header logic
+    });
+
+    // Save
+    doc.save(`audit_logs_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
     <SidebarProvider>
       <DashboardSidebar />
@@ -176,9 +134,9 @@ export default function AuditLogsContent() {
               <h1 className="text-xl font-semibold text-foreground">Audit Logs</h1>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleExportPDF}>
                 <Download className="w-4 h-4 mr-2" />
-                Export
+                Export PDF
               </Button>
             </div>
           </div>
@@ -200,18 +158,16 @@ export default function AuditLogsContent() {
                 </AlertDescription>
               </Alert>
 
-              {/* Tamper Alert */}
-              {tamperedCount > 0 && (
+              {flaggedCount > 0 && (
                 <Alert className="border-red-200 bg-red-50">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-700 ml-2">
-                    <span className="font-semibold">{tamperedCount} integrity failures detected</span> in your audit
+                    <span className="font-semibold">{flaggedCount} integrity failures detected</span> in your audit
                     logs. Review these items immediately for security.
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* Summary Cards */}
               <div className="grid md:grid-cols-3 gap-6">
                 <motion.div variants={fadeInUp}>
                   <Card>
@@ -238,9 +194,7 @@ export default function AuditLogsContent() {
                       <CheckCircle2 className="w-5 h-5 text-green-600" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-foreground">
-                        {auditEntries.filter((e) => e.integrityStatus === "verified").length}
-                      </div>
+                      <div className="text-3xl font-bold text-foreground">{verifiedCount}</div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -255,7 +209,7 @@ export default function AuditLogsContent() {
                       <AlertCircle className="w-5 h-5 text-red-600" />
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-foreground">{tamperedCount}</div>
+                      <div className="text-3xl font-bold text-foreground">{flaggedCount}</div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -280,7 +234,6 @@ export default function AuditLogsContent() {
                 </Card>
               </motion.div>
 
-              {/* Evidence Records Table */}
               <motion.div variants={fadeInUp}>
                 <Card>
                   <CardHeader>
@@ -305,49 +258,41 @@ export default function AuditLogsContent() {
                         <TableBody>
                           {filteredEntries.length > 0 ? (
                             filteredEntries.map((entry) => (
-                              <TableRow key={entry.id}>
+                              <TableRow key={entry._id || entry.id}>
                                 <TableCell>
-                                  <Badge
-                                    variant={
-                                      entry.integrityStatus === "verified"
-                                        ? "default"
-                                        : entry.integrityStatus === "flagged"
-                                          ? "destructive"
-                                          : "secondary"
-                                    }
-                                  >
-                                    {entry.action.replace(/_/g, " ")}
+                                  <Badge variant="outline">
+                                    {(entry.action || "").replace(/_/g, " ")}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
                                   <div>
-                                    <p className="font-medium text-foreground">{entry.taskName}</p>
-                                    {entry.stepName && (
-                                      <p className="text-xs text-muted-foreground">{entry.stepName}</p>
+                                    <p className="font-medium text-foreground text-sm truncate max-w-[200px]" title={entry.details}>{entry.details}</p>
+                                    {entry.metadata?.stepId && (
+                                      <p className="text-xs text-muted-foreground">Step: {entry.metadata.stepId}</p>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell>{entry.proofType || "—"}</TableCell>
+                                <TableCell>{entry.metadata?.fileHash ? "File Proof" : "System"}</TableCell>
                                 <TableCell className="font-mono text-xs">
-                                  {entry.proofHash ? entry.proofHash.slice(0, 12) + "..." : "—"}
+                                  {entry.metadata?.fileHash
+                                    ? String(entry.metadata.fileHash).slice(0, 12) + "..."
+                                    : entry.entryHash
+                                      ? String(entry.entryHash).slice(0, 12) + "..."
+                                      : "—"}
                                 </TableCell>
                                 <TableCell className="text-sm text-muted-foreground">
                                   {formatTimestamp(entry.timestamp)}
                                 </TableCell>
                                 <TableCell>
-                                  <span
-                                    className={`text-sm font-medium ${
-                                      entry.integrityStatus === "verified"
-                                        ? "text-green-600"
-                                        : entry.integrityStatus === "flagged"
-                                          ? "text-red-600"
-                                          : "text-blue-600"
-                                    }`}
-                                  >
-                                    {entry.integrityStatus === "verified" && "✓ Passed"}
-                                    {entry.integrityStatus === "flagged" && "⚠ Failed"}
-                                    {entry.integrityStatus === "pending" && "⏳ Pending"}
-                                  </span>
+                                  {entry.integrityStatus === 'flagged' ? (
+                                    <span className="text-sm font-bold text-red-600 flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3" /> Flagged / Tampered
+                                    </span>
+                                  ) : (
+                                    <span className={`text-sm font-medium ${entry.metadata?.fileHash || entry.entryHash ? "text-green-600" : "text-muted-foreground"}`}>
+                                      {entry.metadata?.fileHash ? "✓ File Secured" : entry.entryHash ? "• Entry Signed" : "• Logged"}
+                                    </span>
+                                  )}
                                 </TableCell>
                               </TableRow>
                             ))
@@ -365,7 +310,6 @@ export default function AuditLogsContent() {
                 </Card>
               </motion.div>
 
-              {/* Immutability Notice */}
               <motion.div variants={fadeInUp}>
                 <Alert>
                   <AlertCircle className="h-4 w-4" />
