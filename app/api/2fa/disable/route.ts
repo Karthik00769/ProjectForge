@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth-server";
 import connectDB from "@/mongodb/db";
