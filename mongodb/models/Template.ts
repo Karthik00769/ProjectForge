@@ -31,6 +31,6 @@ const TemplateSchema = new Schema({
     },
 });
 
-const Template = models.Template || model('Template', TemplateSchema);
+const Template = mongoose.models.Template || mongoose.model('Template', TemplateSchema);
 
 export default Template;

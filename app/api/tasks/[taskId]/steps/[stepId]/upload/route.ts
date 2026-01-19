@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/mongodb/db";
-import Task from "@/mongodb/models/Task";
-import Proof from "@/mongodb/models/Proof";
-import ProofLink from "@/mongodb/models/ProofLink";
+import TaskModel from "@/mongodb/models/Task";
+import ProofModel from "@/mongodb/models/Proof";
+import ProofLinkModel from "@/mongodb/models/ProofLink";
 import { verifyAuth } from "@/lib/auth-server";
 import crypto from "crypto";
 import { extractTextFromBuffer } from "@/lib/gemini";
 import { createAuditEntry } from "@/lib/audit";
+import mongoose from "mongoose";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ taskId: string; stepId: string }> }) {
     try {
@@ -51,6 +52,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
         const fileUrl = `https://mock-storage.com/${authUser.uid}/${taskId}/${stepId}/${file.name}`;
 
         await connectDB();
+
+        // Robust model access
+        const Task = mongoose.models.Task || TaskModel;
+        const Proof = mongoose.models.Proof || ProofModel;
+        const ProofLink = mongoose.models.ProofLink || ProofLinkModel;
+
+        if (!Task || !Proof || !ProofLink) {
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
 
         // 3. Verify Task Ownership & Status
         const task = await Task.findOne({ _id: taskId, userId: authUser.uid });
@@ -157,8 +167,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
 
         return NextResponse.json({ success: true, proof, taskStatus: task.status });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error uploading proof:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
     }
 }

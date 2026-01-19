@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase-admin";
 import connectDB from "@/mongodb/db";
-import User from "@/mongodb/models/User";
+import mongoose from "mongoose";
+import UserModel from "@/mongodb/models/User";
 
 export async function POST(req: NextRequest) {
     try {
@@ -25,6 +26,13 @@ export async function POST(req: NextRequest) {
 
         // Connect to MongoDB
         await connectDB();
+
+        // Robust model access
+        const User = mongoose.models.User || UserModel;
+        if (!User) {
+            console.error("CRITICAL: User model is undefined in auth/sync");
+            return NextResponse.json({ error: "Server Configuration Error: User model not found" }, { status: 500 });
+        }
 
         // Find or Create User
         let user = await User.findOne({ uid });

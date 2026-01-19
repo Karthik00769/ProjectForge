@@ -39,6 +39,6 @@ const ProofLinkSchema = new Schema({
     },
 });
 
-const ProofLink = models.ProofLink || model('ProofLink', ProofLinkSchema);
+const ProofLink = mongoose.models.ProofLink || mongoose.model('ProofLink', ProofLinkSchema);
 
 export default ProofLink;

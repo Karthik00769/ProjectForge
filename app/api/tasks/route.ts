@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/mongodb/db";
-import Task from "@/mongodb/models/Task";
-import Template from "@/mongodb/models/Template";
+import TaskModel from "@/mongodb/models/Task";
+import TemplateModel from "@/mongodb/models/Template";
 import { verifyAuth } from "@/lib/auth-server";
 import mongoose from "mongoose";
 import { createAuditEntry } from "@/lib/audit";
@@ -22,6 +22,15 @@ export async function POST(req: NextRequest) {
         }
 
         await connectDB();
+
+        // Robust model access
+        const Task = mongoose.models.Task || TaskModel;
+        const Template = mongoose.models.Template || TemplateModel;
+
+        if (!Task || !Template) {
+            console.error("CRITICAL: Task or Template model is undefined");
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
 
         // 1. Fetch Template
         const template = await Template.findById(templateId);
@@ -61,9 +70,9 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json({ task: newTask }, { status: 201 });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error creating task:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
     }
 }
 
@@ -77,11 +86,17 @@ export async function GET(req: NextRequest) {
 
         await connectDB();
 
+        // Robust model access
+        const Task = mongoose.models.Task || TaskModel;
+        if (!Task) {
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
+
         const tasks = await Task.find({ userId: authUser.uid }).sort({ createdAt: -1 });
 
         return NextResponse.json(tasks);
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching tasks:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
     }
 }

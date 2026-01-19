@@ -1,4 +1,5 @@
-import AuditLog from "@/mongodb/models/AuditLog";
+import mongoose from "mongoose";
+import AuditLogModel from "@/mongodb/models/AuditLog";
 import crypto from "crypto";
 
 export async function createAuditEntry(data: {
@@ -13,11 +14,18 @@ export async function createAuditEntry(data: {
     ipHash?: string;
     deviceFingerprintHash?: string;
 }) {
-    // 1. Get the last entry's hash to chain them
+    // 1. Ensure model is available
+    const AuditLog = mongoose.models.AuditLog || AuditLogModel;
+    if (!AuditLog) {
+        console.error("CRITICAL: AuditLog model is undefined in createAuditEntry");
+        throw new Error("Internal Server Error: Database model not initialized");
+    }
+
+    // 2. Get the last entry's hash to chain them
     const lastEntry = await AuditLog.findOne({}).sort({ timestamp: -1 });
     const previousHash = lastEntry ? lastEntry.entryHash : "0".repeat(64);
 
-    // 2. Prepare content for hashing
+    // 3. Prepare content for hashing
     const entryData = {
         userId: data.userId,
         action: data.action,
@@ -30,13 +38,13 @@ export async function createAuditEntry(data: {
         timestamp: new Date().toISOString()
     };
 
-    // 3. Generate entry hash
+    // 4. Generate entry hash
     const entryHash = crypto
         .createHash("sha256")
         .update(JSON.stringify(entryData))
         .digest("hex");
 
-    // 4. Create the entry
+    // 5. Create the entry
     return await AuditLog.create({
         ...data,
         entryHash,

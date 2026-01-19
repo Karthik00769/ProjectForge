@@ -34,6 +34,6 @@ const ProofSchema = new Schema({
     },
 });
 
-const Proof = models.Proof || model('Proof', ProofSchema);
+const Proof = mongoose.models.Proof || mongoose.model('Proof', ProofSchema);
 
 export default Proof;

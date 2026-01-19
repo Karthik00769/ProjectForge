@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth-server";
 import connectDB from "@/mongodb/db";
-import User from "@/mongodb/models/User";
-import Task from "@/mongodb/models/Task";
-import Proof from "@/mongodb/models/Proof";
-import AuditLog from "@/mongodb/models/AuditLog";
-import ProofLink from "@/mongodb/models/ProofLink";
+import UserModel from "@/mongodb/models/User";
+import TaskModel from "@/mongodb/models/Task";
+import ProofModel from "@/mongodb/models/Proof";
+import ProofLinkModel from "@/mongodb/models/ProofLink";
 import { adminAuth } from "@/lib/firebase-admin";
 import { getClientInfo } from "@/lib/client-info";
 import { createAuditEntry } from "@/lib/audit";
+import mongoose from "mongoose";
 
 import { decrypt } from "@/lib/crypto";
 import speakeasy from "speakeasy";
@@ -21,6 +21,17 @@ export async function DELETE(req: NextRequest) {
         }
 
         await connectDB();
+
+        // Robust model access
+        const User = mongoose.models.User || UserModel;
+        const Task = mongoose.models.Task || TaskModel;
+        const Proof = mongoose.models.Proof || ProofModel;
+        const ProofLink = mongoose.models.ProofLink || ProofLinkModel;
+
+        if (!User || !Task || !Proof || !ProofLink) {
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
+
         const user = await User.findOne({ uid: authUser.uid });
         if (!user || user.isDeleted) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });

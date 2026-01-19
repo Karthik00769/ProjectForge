@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth-server";
 import connectDB from "@/mongodb/db";
-import User from "@/mongodb/models/User";
+import UserModel from "@/mongodb/models/User";
 import speakeasy from "speakeasy";
 import { decrypt } from "@/lib/crypto";
 import { createAuditEntry } from "@/lib/audit";
 import { getClientInfo } from "@/lib/client-info";
+import mongoose from "mongoose";
 
 export async function POST(req: NextRequest) {
     try {
@@ -20,6 +21,12 @@ export async function POST(req: NextRequest) {
         }
 
         await connectDB();
+
+        const User = mongoose.models.User || UserModel;
+        if (!User) {
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
+
         const user = await User.findOne({ uid: authUser.uid });
         if (!user) {
             return NextResponse.json({ error: "User not found" }, { status: 404 });

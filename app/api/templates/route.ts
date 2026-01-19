@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/mongodb/db";
-import Template from "@/mongodb/models/Template";
+import TemplateModel from "@/mongodb/models/Template";
 import { verifyAuth } from "@/lib/auth-server";
+import mongoose from "mongoose";
 
 // GET: Fetch all templates
 export async function GET(req: NextRequest) {
     try {
         await connectDB();
-        // Allow public access to templates? Or restrict? 
-        // Usually templates can be public or at least viewable by logged in users.
-        // Let's assume public for now or check auth if needed.
-        // User requested "Get all templates".
 
-        // Optional: Filter by category if query param present
+        const Template = mongoose.models.Template || TemplateModel;
+        if (!Template) {
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
+
         const { searchParams } = new URL(req.url);
         const category = searchParams.get('category');
 
@@ -43,6 +44,11 @@ export async function POST(req: NextRequest) {
         }
 
         await connectDB();
+
+        const Template = mongoose.models.Template || TemplateModel;
+        if (!Template) {
+            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+        }
 
         const newTemplate = await Template.create({
             title,
