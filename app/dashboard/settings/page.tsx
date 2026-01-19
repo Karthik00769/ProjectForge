@@ -66,6 +66,7 @@ export default function SettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteConfirmToken, setDeleteConfirmToken] = useState("");
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const handleSaveProfile = () => {
     setSaveSuccess(true)
@@ -127,51 +128,72 @@ export default function SettingsPage() {
     }
   }
 
-  const handleDownloadData = () => {
-    if (!user || !mongoUser) return;
-    const doc = new jsPDF();
-
-    // Header
-    doc.setFontSize(22);
-    doc.text("ProjectForge: Account State Certificate", 14, 20);
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-
-    doc.setDrawColor(200);
-    doc.line(14, 32, 196, 32);
-
-    // Profile Section
-    doc.setFontSize(16);
-    doc.setTextColor(0);
-    doc.text("1. Profile Information", 14, 42);
-    doc.setFontSize(12);
-    doc.text(`Display Name: ${mongoUser.displayName || "Not set"}`, 14, 52);
-    doc.text(`Email Address: ${mongoUser.email}`, 14, 60);
-    doc.text(`Account UID: ${mongoUser.uid}`, 14, 68);
-    doc.text(`Account Created: ${new Date(mongoUser.createdAt).toLocaleDateString()}`, 14, 76);
-
-    // Security Section
-    doc.setFontSize(16);
-    doc.text("2. Security & Authentication State", 14, 90);
-    doc.setFontSize(12);
-    doc.text(`Two-Factor Enabled: ${mongoUser.twoFactorEnabled ? "YES" : "NO"}`, 14, 100);
-    doc.text(`Verification Method: ${mongoUser.twoFactorMethod?.toUpperCase() || "NONE"}`, 14, 108);
-    if (mongoUser.twoFactorEnabledAt) {
-      doc.text(`2FA Activated On: ${new Date(mongoUser.twoFactorEnabledAt).toLocaleString()}`, 14, 116);
+  const handleDownloadData = async () => {
+    if (!user) {
+      toast.error("User not authenticated");
+      return;
     }
-    doc.text(`Account Role: ${mongoUser.role?.toUpperCase() || "USER"}`, 14, 124);
 
-    // Audit State
-    doc.setDrawColor(200);
-    doc.line(14, 135, 196, 135);
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text("This document serves as a verified snapshot of your ProjectForge account state.", 14, 145);
-    doc.text("All security events are recorded in the immutable audit trail.", 14, 150);
+    if (!mongoUser) {
+      toast.error("Profile data not loaded. Please refresh the page.");
+      return;
+    }
 
-    doc.save(`projectforge-data-${user.uid.substring(0, 8)}.pdf`);
-    toast.success("Security status PDF downloaded");
+    setDownloadingPdf(true);
+
+    try {
+      // Small delay to show loading state
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(22);
+      doc.text("ProjectForge: Account State Certificate", 14, 20);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+
+      doc.setDrawColor(200);
+      doc.line(14, 32, 196, 32);
+
+      // Profile Section
+      doc.setFontSize(16);
+      doc.setTextColor(0);
+      doc.text("1. Profile Information", 14, 42);
+      doc.setFontSize(12);
+      doc.text(`Display Name: ${mongoUser.displayName || "Not set"}`, 14, 52);
+      doc.text(`Email Address: ${mongoUser.email}`, 14, 60);
+      doc.text(`Account UID: ${mongoUser.uid}`, 14, 68);
+      doc.text(`Account Created: ${new Date(mongoUser.createdAt).toLocaleDateString()}`, 14, 76);
+
+      // Security Section
+      doc.setFontSize(16);
+      doc.text("2. Security & Authentication State", 14, 90);
+      doc.setFontSize(12);
+      doc.text(`Two-Factor Enabled: ${mongoUser.twoFactorEnabled ? "YES" : "NO"}`, 14, 100);
+      doc.text(`Verification Method: ${mongoUser.twoFactorMethod?.toUpperCase() || "NONE"}`, 14, 108);
+      if (mongoUser.twoFactorEnabledAt) {
+        doc.text(`2FA Activated On: ${new Date(mongoUser.twoFactorEnabledAt).toLocaleString()}`, 14, 116);
+      }
+      doc.text(`Account Role: ${mongoUser.role?.toUpperCase() || "USER"}`, 14, 124);
+
+      // Audit State
+      doc.setDrawColor(200);
+      doc.line(14, 135, 196, 135);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text("This document serves as a verified snapshot of your ProjectForge account state.", 14, 145);
+      doc.text("All security events are recorded in the immutable audit trail.", 14, 150);
+
+      doc.save(`projectforge-data-${user.uid.substring(0, 8)}.pdf`);
+      toast.success("Security status PDF downloaded successfully!");
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast.error("Failed to generate PDF. Please try again.");
+    } finally {
+      setDownloadingPdf(false);
+    }
   }
 
   // 2FA Functions
@@ -481,8 +503,17 @@ export default function SettingsPage() {
                           <p className="text-xs text-muted-foreground">Certified report of your current account state</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm" onClick={handleDownloadData}>
-                        <Download className="w-4 h-4 mr-2" /> Download
+                      <Button variant="outline" size="sm" onClick={handleDownloadData} disabled={downloadingPdf}>
+                        {downloadingPdf ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4 mr-2" /> Download
+                          </>
+                        )}
                       </Button>
                     </div>
                   </CardContent>
