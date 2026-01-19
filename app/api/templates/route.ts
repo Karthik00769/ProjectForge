@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     try {
         await connectDB();
 
-        const Template = mongoose.models.Template || TemplateModel;
+        const Template = mongoose.models.Template;
         if (!Template) {
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
         await connectDB();
 
-        const Template = mongoose.models.Template || TemplateModel;
+        const Template = mongoose.models.Template;
         if (!Template) {
             return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
         }

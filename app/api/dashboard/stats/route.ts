@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/mongodb/db";
 import { verifyAuth } from "@/lib/auth-server";
-import Task from "@/mongodb/models/Task";
-import AuditLog from "@/mongodb/models/AuditLog";
+import TaskModel from "@/mongodb/models/Task";
+import AuditLogModel from "@/mongodb/models/AuditLog";
+import mongoose from "mongoose";
 
 export async function GET(req: NextRequest) {
     try {
@@ -12,6 +13,13 @@ export async function GET(req: NextRequest) {
         }
 
         await connectDB();
+
+        const Task = mongoose.models.Task || TaskModel;
+        const AuditLog = mongoose.models.AuditLog || AuditLogModel;
+
+        if (!Task || !AuditLog) {
+            return NextResponse.json({ error: "Dashboard models not ready" }, { status: 500 });
+        }
 
         // Fetch user tasks
         const tasks = await Task.find({ userId: authUser.uid });

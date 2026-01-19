@@ -21,15 +21,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Template ID is required" }, { status: 400 });
         }
 
+        // Connect to MongoDB & load models
         await connectDB();
 
-        // Robust model access
+        // Robust model access with fallback and logging
+        console.log("[Tasks] Registry check:", { Task: !!mongoose.models.Task, Template: !!mongoose.models.Template });
         const Task = mongoose.models.Task || TaskModel;
         const Template = mongoose.models.Template || TemplateModel;
 
         if (!Task || !Template) {
-            console.error("CRITICAL: Task or Template model is undefined");
-            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+            console.error("CRITICAL: Task or Template model missing from registry and fallback");
+            return NextResponse.json({ error: "Server Configuration Error: Models not ready." }, { status: 500 });
         }
 
         // 1. Fetch Template

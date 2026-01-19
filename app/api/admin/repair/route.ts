@@ -1,10 +1,10 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/mongodb/db";
 import crypto from "crypto";
-import AuditLog from "@/mongodb/models/AuditLog";
-import User from "@/mongodb/models/User";
-import Task from "@/mongodb/models/Task";
+import AuditLogModel from "@/mongodb/models/AuditLog";
+import UserModel from "@/mongodb/models/User";
+import TaskModel from "@/mongodb/models/Task";
+import mongoose from "mongoose";
 
 export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
@@ -16,8 +16,16 @@ export async function GET(req: NextRequest) {
 
     const logsOut: string[] = [];
     try {
-        logsOut.push("Initializing Models...");
         await connectDB();
+
+        const AuditLog = mongoose.models.AuditLog || AuditLogModel;
+        const User = mongoose.models.User || UserModel;
+        const Task = mongoose.models.Task || TaskModel;
+
+        if (!AuditLog || !User || !Task) {
+            console.error("[Repair] Models missing from registry and fallback");
+            return NextResponse.json({ error: "Models not ready" });
+        }
 
         // 1. Repair Audit Logs
         const logs = await AuditLog.find({}).sort({ timestamp: 1 });

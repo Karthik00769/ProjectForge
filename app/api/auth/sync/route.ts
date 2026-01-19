@@ -24,14 +24,24 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Email is required" }, { status: 400 });
         }
 
-        // Connect to MongoDB
+        // Connect to MongoDB & load models
         await connectDB();
 
-        // Robust model access
+        // LOGGING FOR BINARY PROOF (As requested by user)
+        console.log("[AuthSync] mongoose.models keys:", Object.keys(mongoose.models));
+        console.log("[AuthSync] UserModel (static import):", !!UserModel);
+        console.log("[AuthSync] mongoose.models.User:", !!mongoose.models.User);
+
         const User = mongoose.models.User || UserModel;
+
         if (!User) {
-            console.error("CRITICAL: User model is undefined in auth/sync");
-            return NextResponse.json({ error: "Server Configuration Error: User model not found" }, { status: 500 });
+            console.error("CRITICAL: User model remains undefined after initialization attempts.");
+            return NextResponse.json({ error: "Server Configuration Error: User model could not be initialized." }, { status: 500 });
+        }
+
+        console.log("[AuthSync] Final User model defined:", !!User);
+        if (typeof User.create !== 'function') {
+            console.error("CRITICAL: User.create is NOT a function!", typeof User.create);
         }
 
         // Find or Create User

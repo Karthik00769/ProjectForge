@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/mongodb/db";
-import ProofLink from "@/mongodb/models/ProofLink";
-import Task from "@/mongodb/models/Task";
-import AuditLog from "@/mongodb/models/AuditLog";
+import ProofLinkModel from "@/mongodb/models/ProofLink";
+import TaskModel from "@/mongodb/models/Task";
+import AuditLogModel from "@/mongodb/models/AuditLog";
 import { verifyAuth } from "@/lib/auth-server";
+import mongoose from "mongoose";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ taskId: string }> }) {
     try {
@@ -15,10 +16,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
         const { taskId } = await params;
         await connectDB();
 
+        const ProofLink = mongoose.models.ProofLink || ProofLinkModel;
         const link = await ProofLink.findOne({ taskId, userId: authUser.uid });
         return NextResponse.json(link || { visibility: 'private', isActive: false });
 
     } catch (error) {
+        console.error("Share GET Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -39,6 +42,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
         }
 
         await connectDB();
+
+        // Robust model access
+        const Task = mongoose.models.Task || TaskModel;
+        const ProofLink = mongoose.models.ProofLink || ProofLinkModel;
+
+        if (!Task || !ProofLink) {
+            return NextResponse.json({ error: "Server Configuration Error: Models not ready." }, { status: 500 });
+        }
 
         // Check task ownership
         const task = await Task.findOne({ _id: taskId, userId: authUser.uid });

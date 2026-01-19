@@ -15,9 +15,9 @@ export async function POST(req: NextRequest) {
 
         await connectDB();
 
-        const User = mongoose.models.User || UserModel;
+        const User = mongoose.models.User;
         if (!User) {
-            return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
+            return NextResponse.json({ error: "Server Configuration Error: User model not ready." }, { status: 500 });
         }
 
         const user = await User.findOne({ uid: authUser.uid });

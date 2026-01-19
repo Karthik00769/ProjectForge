@@ -7,7 +7,6 @@ interface MongooseCache {
     promise: Promise<typeof mongoose> | null;
 }
 
-// Global augmentation to persist the connection across hot reloads in dev
 declare global {
     var mongooseCache: MongooseCache;
 }
@@ -32,8 +31,9 @@ async function connectDB() {
             bufferCommands: false,
         };
 
-        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-            return mongoose;
+        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
+            console.log("MongoDB Connected successfully.");
+            return mongooseInstance;
         });
     }
 
@@ -43,6 +43,16 @@ async function connectDB() {
         cached.promise = null;
         throw e;
     }
+
+    // MANDATORY MODEL REGISTRATION
+    // We import them here to ensure they are registered on the singleton mongoose instance.
+    // This solves the 'Cannot read properties of undefined (reading create)' bug permanently.
+    await import("@/mongodb/models/User");
+    await import("@/mongodb/models/Task");
+    await import("@/mongodb/models/AuditLog");
+    await import("@/mongodb/models/Proof");
+    await import("@/mongodb/models/ProofLink");
+    await import("@/mongodb/models/Template");
 
     return cached.conn;
 }

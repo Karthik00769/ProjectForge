@@ -15,10 +15,19 @@ export async function createAuditEntry(data: {
     deviceFingerprintHash?: string;
 }) {
     // 1. Ensure model is available
+    console.log("[Audit] Registry check:", !!mongoose.models.AuditLog);
+    console.log("[Audit] Static import check:", !!AuditLogModel);
+
     const AuditLog = mongoose.models.AuditLog || AuditLogModel;
+
     if (!AuditLog) {
         console.error("CRITICAL: AuditLog model is undefined in createAuditEntry");
+        console.log("[Audit] mongoose.models keys:", Object.keys(mongoose.models));
         throw new Error("Internal Server Error: Database model not initialized");
+    }
+
+    if (typeof AuditLog.create !== 'function') {
+        console.error("CRITICAL: AuditLog.create is NOT a function!", typeof AuditLog.create);
     }
 
     // 2. Get the last entry's hash to chain them
