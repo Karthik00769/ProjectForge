@@ -1,8 +1,10 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
-import mongoose from "mongoose";
 import connectDB from "@/mongodb/db";
 import crypto from "crypto";
+import AuditLog from "@/mongodb/models/AuditLog";
+import User from "@/mongodb/models/User";
+import Task from "@/mongodb/models/Task";
 
 export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
@@ -14,15 +16,7 @@ export async function GET(req: NextRequest) {
 
     const logsOut: string[] = [];
     try {
-        logsOut.push("Resetting Models...");
-        if (mongoose.models.AuditLog) delete mongoose.models.AuditLog;
-        if (mongoose.models.User) delete mongoose.models.User;
-        if (mongoose.models.Task) delete mongoose.models.Task;
-
-        const AuditLog = (await import("@/mongodb/models/AuditLog")).default;
-        const User = (await import("@/mongodb/models/User")).default;
-        const Task = (await import("@/mongodb/models/Task")).default;
-
+        logsOut.push("Initializing Models...");
         await connectDB();
 
         // 1. Repair Audit Logs

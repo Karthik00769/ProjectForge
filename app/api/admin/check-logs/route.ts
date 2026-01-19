@@ -1,13 +1,9 @@
-export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/mongodb/db";
-import mongoose from "mongoose";
+import AuditLog from "@/mongodb/models/AuditLog";
 
 export async function GET(req: NextRequest) {
     try {
-        if (mongoose.models.AuditLog) delete mongoose.models.AuditLog;
-        const AuditLog = (await import("@/mongodb/models/AuditLog")).default;
-
         await connectDB();
         const logs = await AuditLog.find({}).limit(10);
         return NextResponse.json({

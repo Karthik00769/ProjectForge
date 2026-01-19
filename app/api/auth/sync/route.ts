@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase-admin";
 import connectDB from "@/mongodb/db";
-import mongoose from "mongoose";
+import User from "@/mongodb/models/User";
 
 export async function POST(req: NextRequest) {
     try {
@@ -25,10 +25,6 @@ export async function POST(req: NextRequest) {
 
         // Connect to MongoDB
         await connectDB();
-
-        // Force refresh model if existing to ensure latest schema
-        if (mongoose.models.User) delete mongoose.models.User;
-        const User = (await import("@/mongodb/models/User")).default;
 
         // Find or Create User
         let user = await User.findOne({ uid });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/mongodb/db";
-import mongoose from "mongoose";
 import { verifyAuth } from "@/lib/auth-server";
+import AuditLog from "@/mongodb/models/AuditLog";
 
 export async function GET(req: NextRequest) {
     try {
@@ -9,10 +9,6 @@ export async function GET(req: NextRequest) {
         if (!authUser) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
-
-        // Force refresh model
-        if (mongoose.models.AuditLog) delete mongoose.models.AuditLog;
-        const AuditLog = (await import("@/mongodb/models/AuditLog")).default;
 
         await connectDB();
 
