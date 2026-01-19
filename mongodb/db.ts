@@ -1,4 +1,12 @@
 import mongoose from 'mongoose';
+// CRITICAL: Static imports required for Vercel serverless
+// Dynamic imports are unreliable in production edge functions
+import '@/mongodb/models/User';
+import '@/mongodb/models/Task';
+import '@/mongodb/models/AuditLog';
+import '@/mongodb/models/Proof';
+import '@/mongodb/models/ProofLink';
+import '@/mongodb/models/Template';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -43,16 +51,6 @@ async function connectDB() {
         cached.promise = null;
         throw e;
     }
-
-    // MANDATORY MODEL REGISTRATION
-    // We import them here to ensure they are registered on the singleton mongoose instance.
-    // This solves the 'Cannot read properties of undefined (reading create)' bug permanently.
-    await import("@/mongodb/models/User");
-    await import("@/mongodb/models/Task");
-    await import("@/mongodb/models/AuditLog");
-    await import("@/mongodb/models/Proof");
-    await import("@/mongodb/models/ProofLink");
-    await import("@/mongodb/models/Template");
 
     return cached.conn;
 }
