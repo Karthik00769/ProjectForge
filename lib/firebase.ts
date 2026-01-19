@@ -12,22 +12,24 @@ const firebaseConfig = {
 
 let app: FirebaseApp;
 let auth: Auth;
+let googleProvider: GoogleAuthProvider;
 
 if (typeof window !== "undefined" || (firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined")) {
     try {
         app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
         auth = getAuth(app);
+        googleProvider = new GoogleAuthProvider();
     } catch (error) {
         console.error("Firebase initialization failed:", error);
         app = {} as FirebaseApp;
         auth = {} as Auth;
+        googleProvider = {} as GoogleAuthProvider;
     }
 } else {
     // Fallback for build time / server-side without env vars
     app = {} as FirebaseApp;
     auth = {} as Auth;
+    googleProvider = {} as GoogleAuthProvider;
 }
-
-const googleProvider = new GoogleAuthProvider();
 
 export { app, auth, googleProvider };
