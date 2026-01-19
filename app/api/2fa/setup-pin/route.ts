@@ -4,6 +4,7 @@ import connectDB from "@/mongodb/db";
 import User from "@/mongodb/models/User";
 import { encrypt } from "@/lib/crypto";
 import { createAuditEntry } from "@/lib/audit";
+import { getClientInfo } from "@/lib/client-info";
 
 export async function POST(req: NextRequest) {
     try {
@@ -31,11 +32,17 @@ export async function POST(req: NextRequest) {
         user.twoFactorSecret = undefined; // Clear TOTP secret if switching
         await user.save();
 
+        const { ipHash, deviceFingerprintHash } = getClientInfo(req);
+
         // Log the event
         await createAuditEntry({
             userId: user.uid,
             action: "2FA_ENABLED",
             details: "Two-Factor Authentication has been enabled (Security PIN)",
+            entityType: 'USER',
+            entityId: user._id.toString(),
+            ipHash,
+            deviceFingerprintHash,
             metadata: {
                 method: "PIN"
             }

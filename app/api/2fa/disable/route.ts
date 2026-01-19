@@ -5,6 +5,7 @@ import User from "@/mongodb/models/User";
 import speakeasy from "speakeasy";
 import { decrypt } from "@/lib/crypto";
 import { createAuditEntry } from "@/lib/audit";
+import { getClientInfo } from "@/lib/client-info";
 
 export async function POST(req: NextRequest) {
     try {
@@ -25,7 +26,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "2FA is already disabled" }, { status: 400 });
         }
 
+        const { ipHash, deviceFingerprintHash } = getClientInfo(req);
         let verified = false;
+
+        const oldMethod = user.twoFactorMethod;
 
         if (user.twoFactorMethod === 'totp' && user.twoFactorSecret) {
             const secret = decrypt(user.twoFactorSecret);
@@ -51,11 +55,15 @@ export async function POST(req: NextRequest) {
         user.twoFactorEnabledAt = undefined;
         await user.save();
 
-        // Log the event
+        // Log the event with evidentiary proof
         await createAuditEntry({
             userId: user.uid,
             action: "2FA_DISABLED",
-            details: `Two-Factor Authentication has been disabled (${user.twoFactorMethod})`
+            details: `Two-Factor Authentication has been disabled (${oldMethod})`,
+            entityType: 'USER',
+            entityId: user._id.toString(),
+            ipHash,
+            deviceFingerprintHash
         });
 
         return NextResponse.json({ message: "2FA disabled successfully" });

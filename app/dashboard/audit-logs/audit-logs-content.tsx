@@ -45,9 +45,37 @@ export default function AuditLogsContent() {
         setLoading(false);
       }
     }
-    fetchLogs();
-    const interval = setInterval(fetchLogs, 10000);
-    return () => clearInterval(interval);
+
+    if (user) {
+      fetchLogs();
+
+      // Real-Time Sync via SSE
+      let eventSource: EventSource | null = null;
+
+      const setupSSE = async () => {
+        const token = await user.getIdToken();
+        eventSource = new EventSource(`/api/sync/events?token=${token}`);
+
+        eventSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === "update") {
+            console.log("Real-time audit update:", data.action);
+            fetchLogs();
+          }
+        };
+
+        eventSource.onerror = () => {
+          eventSource?.close();
+          setTimeout(setupSSE, 5000);
+        };
+      };
+
+      setupSSE();
+
+      return () => {
+        eventSource?.close();
+      };
+    }
   }, [user]);
 
   const filteredEntries = auditEntries.filter((entry) => {

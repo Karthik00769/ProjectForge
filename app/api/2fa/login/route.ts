@@ -5,6 +5,7 @@ import User from "@/mongodb/models/User";
 import speakeasy from "speakeasy";
 import { decrypt } from "@/lib/crypto";
 import { createAuditEntry } from "@/lib/audit";
+import { getClientInfo } from "@/lib/client-info";
 
 export async function POST(req: NextRequest) {
     try {
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
 
         const { token } = await req.json();
         if (!token) {
-            return NextResponse.json({ error: "TOTP Token is required" }, { status: 400 });
+            return NextResponse.json({ error: "Verification code is required" }, { status: 400 });
         }
 
         await connectDB();
@@ -28,11 +29,11 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "2FA is not enabled for this account" }, { status: 400 });
         }
 
+        const { ipHash, deviceFingerprintHash } = getClientInfo(req);
         let verified = false;
 
         if (user.twoFactorMethod === 'totp' && user.twoFactorSecret) {
             const secret = decrypt(user.twoFactorSecret);
-            // Verify the token
             verified = speakeasy.totp.verify({
                 secret: secret,
                 encoding: 'base32',
@@ -45,13 +46,16 @@ export async function POST(req: NextRequest) {
         }
 
         if (!verified) {
-            // Log failed attempt
+            // Log failed attempt with evidentiary proof
             await createAuditEntry({
                 userId: user.uid,
                 action: "2FA_FAILED_ATTEMPT",
-                details: "Incorrect 2FA code entered during login",
+                details: `Incorrect ${user.twoFactorMethod.toUpperCase()} entered during login`,
+                entityType: 'USER',
+                entityId: user._id.toString(),
+                ipHash,
+                deviceFingerprintHash,
                 metadata: {
-                    ip: req.headers.get("x-forwarded-for") || "unknown",
                     method: user.twoFactorMethod
                 }
             });
@@ -60,6 +64,16 @@ export async function POST(req: NextRequest) {
         }
 
         // 2FA Success
+        await createAuditEntry({
+            userId: user.uid,
+            action: "LOGIN_2FA_SUCCESS",
+            details: "Two-factor authentication verified successfully",
+            entityType: 'USER',
+            entityId: user._id.toString(),
+            ipHash,
+            deviceFingerprintHash
+        });
+
         return NextResponse.json({ success: true, message: "2FA verified" });
 
     } catch (error) {

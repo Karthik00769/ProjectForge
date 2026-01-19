@@ -57,18 +57,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             } else {
                 setUser(null);
                 setMongoUser(null);
+                // Hard redirect if trying to access dashboard while not logged in
+                if (window.location.pathname.startsWith("/dashboard")) {
+                    router.replace("/auth/sign-in");
+                }
             }
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [router]);
 
     const logout = async () => {
-        await auth.signOut();
-        setUser(null);
-        setMongoUser(null);
-        router.push("/auth/sign-in");
+        try {
+            await auth.signOut();
+            setUser(null);
+            setMongoUser(null);
+
+            // Security: Replace history state so 'Back' button doesn't return to dashboard
+            window.history.replaceState(null, "", "/auth/sign-in");
+            router.replace("/auth/sign-in");
+
+            // Clear any local caches
+            localStorage.clear();
+            sessionStorage.clear();
+        } catch (error) {
+            console.error("Logout error:", error);
+        }
     };
 
     return (

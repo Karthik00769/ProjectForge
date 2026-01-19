@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Lock, Eye, EyeOff, Save, LogOut, Trash2, ShieldCheck, QrCode, Loader2, Download, AlertCircle, Key, Smartphone, ArrowRight, ShieldAlert } from "lucide-react"
+import { Lock, Eye, EyeOff, Save, LogOut, Trash2, ShieldCheck, QrCode, Loader2, Download, AlertCircle, Key, Smartphone, ArrowRight, ShieldAlert, AlertTriangle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
@@ -63,6 +63,9 @@ export default function SettingsPage() {
   const email = mongoUser?.email || user?.email || ""
   const [firstName = "", ...lastNameParts] = displayName.split(" ")
   const lastName = lastNameParts.join(" ")
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteConfirmToken, setDeleteConfirmToken] = useState("");
 
   const handleSaveProfile = () => {
     setSaveSuccess(true)
@@ -81,44 +84,94 @@ export default function SettingsPage() {
   }
 
   const handleDeleteAccount = async () => {
-    if (!confirm("Are you ABSOLUTELY sure you want to delete your account? This will erase all your tasks, proofs, and audit logs permanently.")) return;
+    // If 2FA is enabled, we need to show the secure verification dialog
+    if (mongoUser?.twoFactorEnabled) {
+      setIsDeleteDialogOpen(true);
+      return;
+    }
 
+    // Otherwise standard confirmation
+    if (confirm("Are you ABSOLUTELY sure? This cannot be undone.")) {
+      await executeAccountDeletion();
+    }
+  }
+
+  const executeAccountDeletion = async (twoFactorToken?: string) => {
     try {
+      setIsDeleting(true);
       const token = await user?.getIdToken();
       const res = await fetch("/api/user/delete", {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ twoFactorToken })
       });
+
       if (res.ok) {
         toast.success("Account deleted successfully");
+        setIsDeleteDialogOpen(false);
+        // Clean history so they can't go back to dashboard
+        window.history.replaceState(null, "", "/auth/sign-up");
         await logout();
-        router.push("/auth/sign-up");
+        router.replace("/auth/sign-up");
       } else {
-        toast.error("Failed to delete account");
+        const error = await res.json();
+        toast.error(error.error || "Failed to delete account");
       }
     } catch (e) {
       toast.error("An error occurred during account deletion");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
   const handleDownloadData = () => {
-    if (!user) return;
+    if (!user || !mongoUser) return;
     const doc = new jsPDF();
+
+    // Header
     doc.setFontSize(22);
-    doc.text("ProjectForge User Data Report", 14, 20);
+    doc.text("ProjectForge: Account State Certificate", 14, 20);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+
+    doc.setDrawColor(200);
+    doc.line(14, 32, 196, 32);
+
+    // Profile Section
+    doc.setFontSize(16);
+    doc.setTextColor(0);
+    doc.text("1. Profile Information", 14, 42);
     doc.setFontSize(12);
-    doc.text(`User ID: ${user.uid}`, 14, 32);
-    doc.text(`Email: ${user.email}`, 14, 40);
-    doc.text(`Name: ${displayName}`, 14, 48);
-    doc.text(`Plan: ${mongoUser?.role === 'admin' ? 'Administrator' : 'Standard User'}`, 14, 56);
-    doc.text(`Credits: ${mongoUser?.credits || 0}`, 14, 64);
-    doc.text(`2FA Enabled: ${mongoUser?.twoFactorEnabled ? 'Yes' : 'No'}`, 14, 72);
-    doc.text(`Report Generated: ${new Date().toLocaleString()}`, 14, 85);
-    doc.text("--------------------------------------------------", 14, 95);
-    doc.text("This report contains your profile information and security settings stored", 14, 105);
-    doc.text("on ProjectForge. For your full task history, please use the Audit Logs export.", 14, 112);
-    doc.save(`projectforge-data-${user.uid.slice(0, 8)}.pdf`);
-    toast.success("Data report downloaded");
+    doc.text(`Display Name: ${mongoUser.displayName || "Not set"}`, 14, 52);
+    doc.text(`Email Address: ${mongoUser.email}`, 14, 60);
+    doc.text(`Account UID: ${mongoUser.uid}`, 14, 68);
+    doc.text(`Account Created: ${new Date(mongoUser.createdAt).toLocaleDateString()}`, 14, 76);
+
+    // Security Section
+    doc.setFontSize(16);
+    doc.text("2. Security & Authentication State", 14, 90);
+    doc.setFontSize(12);
+    doc.text(`Two-Factor Enabled: ${mongoUser.twoFactorEnabled ? "YES" : "NO"}`, 14, 100);
+    doc.text(`Verification Method: ${mongoUser.twoFactorMethod?.toUpperCase() || "NONE"}`, 14, 108);
+    if (mongoUser.twoFactorEnabledAt) {
+      doc.text(`2FA Activated On: ${new Date(mongoUser.twoFactorEnabledAt).toLocaleString()}`, 14, 116);
+    }
+    doc.text(`Account Role: ${mongoUser.role?.toUpperCase() || "USER"}`, 14, 124);
+
+    // Audit State
+    doc.setDrawColor(200);
+    doc.line(14, 135, 196, 135);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text("This document serves as a verified snapshot of your ProjectForge account state.", 14, 145);
+    doc.text("All security events are recorded in the immutable audit trail.", 14, 150);
+
+    doc.save(`projectforge-data-${user.uid.substring(0, 8)}.pdf`);
+    toast.success("Security status PDF downloaded");
   }
 
   // 2FA Functions
@@ -546,6 +599,49 @@ export default function SettingsPage() {
             <Button onClick={handleSetupPin} disabled={pinToken.length !== 6 || verifying2fa} className="w-full">
               {verifying2fa ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Activate My PIN
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Secure Deletion Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md border-red-200">
+          <DialogHeader className="text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+            <DialogTitle className="text-xl text-red-800">Final Confirmation Required</DialogTitle>
+            <DialogDescription>
+              To permanently delete your account, please enter your 6-digit {mongoUser?.twoFactorMethod === 'pin' ? 'Security PIN' : 'Authenticator Code'}. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6 flex flex-col items-center gap-6">
+            <InputOTP maxLength={6} value={deleteConfirmToken} onChange={setDeleteConfirmToken} autoFocus>
+              <InputOTPGroup>
+                <InputOTPSlot index={0} className="w-12 h-14 text-lg border-red-200" />
+                <InputOTPSlot index={1} className="w-12 h-14 text-lg border-red-200" />
+                <InputOTPSlot index={2} className="w-12 h-14 text-lg border-red-200" />
+                <InputOTPSlot index={3} className="w-12 h-14 text-lg border-red-200" />
+                <InputOTPSlot index={4} className="w-12 h-14 text-lg border-red-200" />
+                <InputOTPSlot index={5} className="w-12 h-14 text-lg border-red-200" />
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full"
+              disabled={deleteConfirmToken.length !== 6 || isDeleting}
+              onClick={() => executeAccountDeletion(deleteConfirmToken)}
+            >
+              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Permanently Delete
             </Button>
           </DialogFooter>
         </DialogContent>

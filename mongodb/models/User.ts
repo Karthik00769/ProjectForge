@@ -45,6 +45,13 @@ const UserSchema = new Schema({
         type: Date,
         required: false,
     },
+    isDeleted: {
+        type: Boolean,
+        default: false,
+    },
+    deletedAt: {
+        type: Date,
+    },
     createdAt: {
         type: Date,
         default: Date.now,

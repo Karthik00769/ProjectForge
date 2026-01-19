@@ -23,6 +23,18 @@ const AuditLogSchema = new Schema({
         type: Map,
         of: Schema.Types.Mixed, // Flexible metadata like { fileHash, stepId, ipAddress }
     },
+    entityType: {
+        type: String, // e.g., 'TASK', 'USER', 'PROOF'
+    },
+    entityId: {
+        type: String, // ID of the referenced entity
+    },
+    ipHash: {
+        type: String, // Hashed IP for privacy
+    },
+    deviceFingerprintHash: {
+        type: String, // Hashed fingerprint
+    },
     entryHash: {
         type: String, // Hash of this entry
         unique: true,
@@ -38,6 +50,7 @@ const AuditLogSchema = new Schema({
         type: Date,
         default: Date.now,
         immutable: true, // Cannot be changed once written
+        index: true,
     },
 });
 

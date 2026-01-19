@@ -8,6 +8,10 @@ export async function createAuditEntry(data: {
     taskId?: string;
     metadata?: any;
     integrityStatus?: string;
+    entityType?: string;
+    entityId?: string;
+    ipHash?: string;
+    deviceFingerprintHash?: string;
 }) {
     // 1. Get the last entry's hash to chain them
     const lastEntry = await AuditLog.findOne({}).sort({ timestamp: -1 });
@@ -19,6 +23,8 @@ export async function createAuditEntry(data: {
         action: data.action,
         details: data.details || "",
         taskId: data.taskId || "",
+        entityType: data.entityType || "",
+        entityId: data.entityId || "",
         metadata: JSON.stringify(data.metadata || {}),
         previousHash,
         timestamp: new Date().toISOString()

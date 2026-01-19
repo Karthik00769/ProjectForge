@@ -56,10 +56,37 @@ export default function DashboardPage() {
       }
     }
 
-    fetchStats();
+    if (user) {
+      fetchStats();
 
-    const interval = setInterval(fetchStats, 10000);
-    return () => clearInterval(interval);
+      // Implement Real-Time Sync via SSE
+      let eventSource: EventSource | null = null;
+
+      const setupSSE = async () => {
+        const token = await user.getIdToken();
+        eventSource = new EventSource(`/api/sync/events?token=${token}`);
+
+        eventSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === "update") {
+            console.log("Real-time update received:", data.action);
+            fetchStats();
+          }
+        };
+
+        eventSource.onerror = () => {
+          eventSource?.close();
+          // Attempt reconnect after 5s if error
+          setTimeout(setupSSE, 5000);
+        };
+      };
+
+      setupSSE();
+
+      return () => {
+        eventSource?.close();
+      };
+    }
   }, [user]);
 
   const handleExportStats = () => {
