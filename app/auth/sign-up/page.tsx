@@ -24,7 +24,7 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const handlePostSignIn = async (user: any) => {
+  const handlePostSignIn = async (user: any, displayName?: string, photoURL?: string) => {
     try {
       const token = await user.getIdToken();
       const res = await fetch(`/api/auth/sync?t=${Date.now()}`, {
@@ -32,14 +32,17 @@ export default function SignUpPage() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({
+          displayName: displayName || user.displayName,
+          photoURL: photoURL || user.photoURL
+        })
       });
 
       if (res.ok) {
         const data = await res.json();
-        // Even on signup, check if 2FA is somehow already enabled (e.g. returning user via Google)
         if (data.user.twoFactorEnabled) {
-          router.push("/auth/sign-in"); // Redirect to sign-in to handle 2FA flow
+          router.push("/auth/sign-in");
         } else {
           router.push("/dashboard");
         }
@@ -66,7 +69,7 @@ export default function SignUpPage() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       await updateProfile(userCredential.user, { displayName: fullName })
-      await handlePostSignIn(userCredential.user)
+      await handlePostSignIn(userCredential.user, fullName)
     } catch (err: any) {
       console.error(err)
       if (err.code === "auth/email-already-in-use") {

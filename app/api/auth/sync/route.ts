@@ -15,6 +15,9 @@ export async function POST(req: NextRequest) {
         // Verify Firebase Token
         const decodedToken = await adminAuth.verifyIdToken(token);
         const { uid, email, name, picture } = decodedToken;
+        const body = await req.json().catch(() => ({}));
+        const inputName = body.displayName || name;
+        const inputPicture = body.photoURL || picture;
 
         if (!email) {
             return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -34,12 +37,17 @@ export async function POST(req: NextRequest) {
             user = await User.create({
                 uid,
                 email,
-                displayName: name || email.split("@")[0],
-                photoURL: picture,
+                displayName: inputName || email.split("@")[0],
+                photoURL: inputPicture,
                 role: "user",
                 credits: 0,
             });
             console.log(`New user created: ${email}`);
+        } else {
+            // Update existing user details to stay in sync
+            user.displayName = inputName || user.displayName;
+            user.photoURL = inputPicture || user.photoURL;
+            await user.save();
         }
 
         // Return user object, force toObject to bypass any Mongoose internal issues

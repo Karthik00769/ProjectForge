@@ -31,7 +31,7 @@ export default function SignInPage() {
   const [verifying2fa, setVerifying2fa] = useState(false)
   const [twoFactorMethod, setTwoFactorMethod] = useState<'totp' | 'pin'>('totp')
 
-  const handlePostSignIn = async (user: any) => {
+  const handlePostSignIn = async (user: any, displayName?: string, photoURL?: string) => {
     try {
       const token = await user.getIdToken();
       const res = await fetch(`/api/auth/sync?t=${Date.now()}`, {
@@ -39,7 +39,11 @@ export default function SignInPage() {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({
+          displayName: displayName || user.displayName,
+          photoURL: photoURL || user.photoURL
+        })
       });
 
       if (res.ok) {
