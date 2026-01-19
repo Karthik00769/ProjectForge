@@ -1,5 +1,5 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, Auth } from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -10,9 +10,24 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
+let app: FirebaseApp;
+let auth: Auth;
+
+if (typeof window !== "undefined" || (firebaseConfig.apiKey && firebaseConfig.apiKey !== "undefined")) {
+    try {
+        app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        auth = getAuth(app);
+    } catch (error) {
+        console.error("Firebase initialization failed:", error);
+        app = {} as FirebaseApp;
+        auth = {} as Auth;
+    }
+} else {
+    // Fallback for build time / server-side without env vars
+    app = {} as FirebaseApp;
+    auth = {} as Auth;
+}
+
 const googleProvider = new GoogleAuthProvider();
 
 export { app, auth, googleProvider };

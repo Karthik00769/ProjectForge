@@ -50,6 +50,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     useEffect(() => {
+        if (!auth || typeof auth.onAuthStateChanged !== 'function') {
+            setLoading(false);
+            return;
+        }
+
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 setUser(firebaseUser);
@@ -58,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser(null);
                 setMongoUser(null);
                 // Hard redirect if trying to access dashboard while not logged in
-                if (window.location.pathname.startsWith("/dashboard")) {
+                if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) {
                     router.replace("/auth/sign-in");
                 }
             }
