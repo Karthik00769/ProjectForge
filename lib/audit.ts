@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import AuditLogModel from "@/mongodb/models/AuditLog";
 import crypto from "crypto";
 
 export async function createAuditEntry(data: {
@@ -14,20 +13,27 @@ export async function createAuditEntry(data: {
     ipHash?: string;
     deviceFingerprintHash?: string;
 }) {
-    // 1. Ensure model is available
-    console.log("[Audit] Registry check:", !!mongoose.models.AuditLog);
-    console.log("[Audit] Static import check:", !!AuditLogModel);
-
-    const AuditLog = mongoose.models.AuditLog || AuditLogModel;
-
-    if (!AuditLog) {
-        console.error("CRITICAL: AuditLog model is undefined in createAuditEntry");
-        console.log("[Audit] mongoose.models keys:", Object.keys(mongoose.models));
-        throw new Error("Internal Server Error: Database model not initialized");
-    }
-
-    if (typeof AuditLog.create !== 'function') {
-        console.error("CRITICAL: AuditLog.create is NOT a function!", typeof AuditLog.create);
+    // NUCLEAR OPTION: Define AuditLog model inline if it doesn't exist
+    let AuditLog;
+    if (mongoose.models.AuditLog) {
+        AuditLog = mongoose.models.AuditLog;
+    } else {
+        const AuditLogSchema = new mongoose.Schema({
+            userId: { type: String, required: true, index: true },
+            taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', index: true },
+            action: { type: String, required: true },
+            details: { type: String },
+            metadata: { type: Map, of: mongoose.Schema.Types.Mixed },
+            entityType: { type: String },
+            entityId: { type: String },
+            ipHash: { type: String },
+            deviceFingerprintHash: { type: String },
+            entryHash: { type: String, unique: true },
+            previousHash: { type: String },
+            integrityStatus: { type: String, default: 'valid' },
+            timestamp: { type: Date, default: Date.now, immutable: true, index: true },
+        });
+        AuditLog = mongoose.model('AuditLog', AuditLogSchema);
     }
 
     // 2. Get the last entry's hash to chain them

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase-admin";
 import connectDB from "@/mongodb/db";
 import mongoose from "mongoose";
-import UserModel from "@/mongodb/models/User";
 
 export async function POST(req: NextRequest) {
     try {
@@ -27,22 +26,32 @@ export async function POST(req: NextRequest) {
         // Connect to MongoDB & load models
         await connectDB();
 
-        // LOGGING FOR BINARY PROOF (As requested by user)
-        console.log("[AuthSync] mongoose.models keys:", Object.keys(mongoose.models));
-        console.log("[AuthSync] UserModel (static import):", !!UserModel);
-        console.log("[AuthSync] mongoose.models.User:", !!mongoose.models.User);
-
-        const User = mongoose.models.User || UserModel;
-
-        if (!User) {
-            console.error("CRITICAL: User model remains undefined after initialization attempts.");
-            return NextResponse.json({ error: "Server Configuration Error: User model could not be initialized." }, { status: 500 });
+        // NUCLEAR OPTION: Define User model inline if it doesn't exist
+        let User;
+        if (mongoose.models.User) {
+            User = mongoose.models.User;
+        } else {
+            const UserSchema = new mongoose.Schema({
+                uid: { type: String, required: true, unique: true },
+                email: { type: String, required: true, unique: true },
+                displayName: { type: String },
+                photoURL: { type: String },
+                role: { type: String, default: 'user' },
+                credits: { type: Number, default: 0 },
+                twoFactorEnabled: { type: Boolean, default: false },
+                twoFactorMethod: { type: String, default: 'totp' },
+                twoFactorSecret: { type: String, required: false },
+                twoFactorPin: { type: String, required: false },
+                twoFactorEnabledAt: { type: Date, required: false },
+                isDeleted: { type: Boolean, default: false },
+                deletedAt: { type: Date },
+                createdAt: { type: Date, default: Date.now },
+                updatedAt: { type: Date, default: Date.now },
+            });
+            User = mongoose.model('User', UserSchema);
         }
 
-        console.log("[AuthSync] Final User model defined:", !!User);
-        if (typeof User.create !== 'function') {
-            console.error("CRITICAL: User.create is NOT a function!", typeof User.create);
-        }
+        console.log("[AuthSync] User model status:", !!User, typeof User?.create);
 
         // Find or Create User
         let user = await User.findOne({ uid });
@@ -64,20 +73,29 @@ export async function POST(req: NextRequest) {
             await user.save();
         }
 
-        // Return user object, force toObject to bypass any Mongoose internal issues
-        return NextResponse.json({ user: user.toObject() });
-    } catch (error: any) {
-        console.error("CRITICAL: Auth sync error:", {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
+        return NextResponse.json({
+            success: true,
+            user: {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+                role: user.role,
+                twoFactorEnabled: user.twoFactorEnabled
+            }
         });
+
+    } catch (error: any) {
+        console.error("Auth Sync Error:", error);
         if (error.message.includes("whitelist")) {
             return NextResponse.json({
                 error: "Database connection failed. Please ensure your IP is whitelisted in MongoDB Atlas.",
                 details: "Whitelist error detected in backend logs."
             }, { status: 503 });
         }
-        return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
+        return NextResponse.json({
+            error: "Internal Server Error",
+            details: error.message
+        }, { status: 500 });
     }
 }
