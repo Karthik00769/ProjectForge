@@ -52,8 +52,18 @@ export async function POST(req: NextRequest) {
 
         // Return user object, force toObject to bypass any Mongoose internal issues
         return NextResponse.json({ user: user.toObject() });
-    } catch (error) {
-        console.error("Auth sync error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    } catch (error: any) {
+        console.error("CRITICAL: Auth sync error:", {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
+        if (error.message.includes("whitelist")) {
+            return NextResponse.json({
+                error: "Database connection failed. Please ensure your IP is whitelisted in MongoDB Atlas.",
+                details: "Whitelist error detected in backend logs."
+            }, { status: 503 });
+        }
+        return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
     }
 }

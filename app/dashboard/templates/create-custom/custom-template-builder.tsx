@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 import { motion } from "framer-motion"
 import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -44,6 +45,10 @@ export function CustomTemplateBuilder() {
   const [templateName, setTemplateName] = useState("")
   const [templateCategory, setTemplateCategory] = useState("")
   const [steps, setSteps] = useState<CustomStep[]>([])
+  const [isSaving, setIsSaving] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const { user } = useAuth()
+
 
   const addStep = () => {
     const newStep: CustomStep = {
@@ -65,15 +70,81 @@ export function CustomTemplateBuilder() {
     setSteps(steps.filter((step) => step.id !== id).map((step, i) => ({ ...step, order: i + 1 })))
   }
 
-  const saveTemplate = () => {
+  const handleSuggestSteps = async () => {
+    if (!templateName) {
+      alert("Please enter a template name first to get suggestions.")
+      return
+    }
+
+    setIsGenerating(true)
+    try {
+      const res = await fetch("/api/ai/suggest-steps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobTitle: templateName })
+      })
+      if (res.ok) {
+        const suggestedSteps = await res.json()
+        const newSteps: CustomStep[] = suggestedSteps.map((s: any, i: number) => ({
+          id: `step-${Date.now()}-${i}`,
+          name: s.title,
+          description: s.description,
+          isRequired: true,
+          proofType: "both",
+          order: steps.length + i + 1
+        }))
+        setSteps([...steps, ...newSteps])
+      }
+    } catch (err) {
+      console.error("AI Suggestion Error:", err)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const saveTemplate = async () => {
     if (!templateName || !templateCategory || steps.length === 0) {
       alert("Please fill in all required fields")
       return
     }
-    // In a real app, this would save to backend
-    alert("Custom template saved! You can now use it to create tasks.")
-    router.push("/dashboard/templates")
+
+    setIsSaving(true)
+    try {
+      const token = await user?.getIdToken()
+      const res = await fetch("/api/templates", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: templateName,
+          category: templateCategory,
+          steps: steps.map(s => ({
+            id: s.id,
+            name: s.name,
+            description: s.description,
+            required: s.isRequired,
+            proofType: s.proofType
+          }))
+        })
+      })
+
+      if (res.ok) {
+        alert("Custom template saved! You can now use it to create tasks.")
+        router.push("/dashboard/templates")
+      } else {
+        const error = await res.json()
+        alert(error.error || "Failed to save template")
+      }
+    } catch (err) {
+      console.error("Save Template Error:", err)
+      alert("An error occurred while saving the template.")
+    } finally {
+      setIsSaving(false)
+    }
   }
+
 
   const categories = [
     "Business & Client Delivery",
@@ -114,14 +185,25 @@ export function CustomTemplateBuilder() {
                     <CardDescription>Define your custom template name and category</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-2 block">Template Name</label>
-                      <Input
-                        placeholder="e.g., Project Handoff Verification"
-                        value={templateName}
-                        onChange={(e) => setTemplateName(e.target.value)}
-                      />
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <label className="text-sm font-medium text-foreground mb-2 block">Template Name</label>
+                        <Input
+                          placeholder="e.g., Project Handoff Verification"
+                          value={templateName}
+                          onChange={(e) => setTemplateName(e.target.value)}
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleSuggestSteps}
+                        disabled={isGenerating || !templateName}
+                      >
+                        {isGenerating ? "Generating..." : "Suggest Steps with AI"}
+                      </Button>
                     </div>
+
                     <div>
                       <label className="text-sm font-medium text-foreground mb-2 block">Category</label>
                       <Select value={templateCategory} onValueChange={setTemplateCategory}>
@@ -257,9 +339,9 @@ export function CustomTemplateBuilder() {
                 <Button
                   className="flex-1"
                   onClick={saveTemplate}
-                  disabled={!templateName || !templateCategory || steps.length === 0}
+                  disabled={!templateName || !templateCategory || steps.length === 0 || isSaving}
                 >
-                  Save Custom Template
+                  {isSaving ? "Saving..." : "Save Custom Template"}
                 </Button>
               </motion.div>
             </motion.div>

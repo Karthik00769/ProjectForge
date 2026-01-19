@@ -24,14 +24,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ proo
         }
 
         if (link.visibility === 'restricted') {
-            const email = req.nextUrl.searchParams.get('email');
+            const queryEmail = req.nextUrl.searchParams.get('email');
+
+            // Secure Email Verification
+            // If the user is logged in, use their actual verified email
+            let authUser = null;
+            try {
+                const authHeader = req.headers.get("Authorization");
+                if (authHeader) {
+                    const { verifyAuth } = await import("@/lib/auth-server");
+                    authUser = await verifyAuth();
+                }
+            } catch (e) {
+                console.error("Auth check failed for restricted link:", e);
+            }
+
+            const activeEmail = authUser?.email || queryEmail;
 
             // Normalize emails for comparison
             const allowedEmails = (link.allowedEmails || []).map((e: string) => e.toLowerCase().trim());
-            const userEmail = (email || '').toLowerCase().trim();
+            const userEmail = (activeEmail || '').toLowerCase().trim();
 
-            if (!email || !allowedEmails.includes(userEmail)) {
-                return NextResponse.json({ error: "Access restricted to allowed emails only. Please provide a valid email." }, { status: 403 });
+            if (!activeEmail || !allowedEmails.includes(userEmail)) {
+                return NextResponse.json({
+                    error: "Access restricted to allowed emails only.",
+                    requiresAuth: !authUser,
+                    details: authUser ? "Your email is not on the allowed list." : "Please sign in with an authorized email or provide a valid access email."
+                }, { status: 403 });
             }
         }
 

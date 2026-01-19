@@ -68,7 +68,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
 
         // Log if visibility changed
         if (isNew || previousVisibility !== visibility) {
-            await AuditLog.create({
+            const { createAuditEntry } = await import("@/lib/audit");
+            await createAuditEntry({
                 userId: authUser.uid,
                 taskId,
                 action: "PROOF_LINK_UPDATED",
