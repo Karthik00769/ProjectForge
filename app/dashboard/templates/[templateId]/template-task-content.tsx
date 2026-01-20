@@ -13,6 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { getTemplateById } from "../template-config"
+import { useAuth } from "@/contexts/AuthContext"
+import { toast } from "sonner"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -31,12 +33,62 @@ const staggerContainer = {
 
 export function TemplateTaskContent({ templateId }: { templateId: string }) {
   const router = useRouter()
+  const { user } = useAuth()
   const template = getTemplateById(templateId)
 
   const [completedSteps, setCompletedSteps] = useState<string[]>([])
   const [currentStepNotes, setCurrentStepNotes] = useState<Record<string, string>>({})
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({})
   const [dragActive, setDragActive] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  const saveTask = async () => {
+    if (!template || !user) {
+      toast.error("Please log in to save tasks")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const token = await user.getIdToken()
+
+      // Create task from frontend template data
+      const response = await fetch("/api/tasks/create-from-template", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: template.name,
+          description: template.description,
+          templateData: {
+            id: template.id,
+            name: template.name,
+            category: template.category,
+            steps: template.steps
+          },
+          dueDate: null
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to create task")
+      }
+
+      const { task } = await response.json()
+      toast.success("Task created successfully!")
+
+      // Redirect to the task details page
+      router.push(`/dashboard/tasks/${task._id}`)
+    } catch (error: any) {
+      console.error("Error creating task:", error)
+      toast.error(error.message || "Failed to create task")
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   if (!template) {
     return (
@@ -196,13 +248,12 @@ export function TemplateTaskContent({ templateId }: { templateId: string }) {
                             onDragLeave={handleDrag}
                             onDragOver={handleDrag}
                             onDrop={(e) => handleDrop(e, step.id)}
-                            className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                              dragActive
-                                ? "border-primary bg-primary/5"
-                                : uploadedFiles[step.id]
-                                  ? "border-green-300 bg-green-50"
-                                  : "border-border bg-background"
-                            }`}
+                            className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${dragActive
+                              ? "border-primary bg-primary/5"
+                              : uploadedFiles[step.id]
+                                ? "border-green-300 bg-green-50"
+                                : "border-border bg-background"
+                              }`}
                           >
                             {uploadedFiles[step.id] ? (
                               <div className="space-y-2">
@@ -264,8 +315,12 @@ export function TemplateTaskContent({ templateId }: { templateId: string }) {
                 <Button variant="outline" className="flex-1 bg-transparent" onClick={() => router.back()}>
                   Cancel
                 </Button>
-                <Button className="flex-1" disabled={completedSteps.length === 0}>
-                  Save Task Progress
+                <Button
+                  className="flex-1"
+                  disabled={completedSteps.length === 0 || isSaving}
+                  onClick={saveTask}
+                >
+                  {isSaving ? "Saving..." : "Save Task Progress"}
                 </Button>
               </motion.div>
             </motion.div>

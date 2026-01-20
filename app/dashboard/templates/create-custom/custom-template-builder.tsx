@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext"
 import { motion } from "framer-motion"
 import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
@@ -72,31 +73,44 @@ export function CustomTemplateBuilder() {
 
   const handleSuggestSteps = async () => {
     if (!templateName) {
-      alert("Please enter a template name first to get suggestions.")
+      toast.error("Please enter a template name first to get suggestions.")
       return
     }
 
     setIsGenerating(true)
     try {
-      const res = await fetch("/api/ai/suggest-steps", {
+      const res = await fetch("/api/ai/generate-steps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobTitle: templateName })
       })
+
       if (res.ok) {
-        const suggestedSteps = await res.json()
+        const data = await res.json()
+        const suggestedSteps = data.steps || data
+
+        if (!Array.isArray(suggestedSteps) || suggestedSteps.length === 0) {
+          toast.error("No steps were generated. Please try a different job title.")
+          return
+        }
+
         const newSteps: CustomStep[] = suggestedSteps.map((s: any, i: number) => ({
           id: `step-${Date.now()}-${i}`,
-          name: s.title,
+          name: s.title || s.name,
           description: s.description,
           isRequired: true,
           proofType: "both",
           order: steps.length + i + 1
         }))
         setSteps([...steps, ...newSteps])
+        toast.success(`Added ${newSteps.length} AI-suggested steps!`)
+      } else {
+        const error = await res.json()
+        toast.error(error.error || "Failed to generate AI suggestions")
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("AI Suggestion Error:", err)
+      toast.error(err.message || "Failed to generate AI suggestions")
     } finally {
       setIsGenerating(false)
     }
@@ -104,13 +118,23 @@ export function CustomTemplateBuilder() {
 
   const saveTemplate = async () => {
     if (!templateName || !templateCategory || steps.length === 0) {
-      alert("Please fill in all required fields")
+      toast.error("Please fill in all required fields")
+      return
+    }
+
+    if (!user) {
+      toast.error("Please log in to save templates")
       return
     }
 
     setIsSaving(true)
     try {
-      const token = await user?.getIdToken()
+      const token = await user.getIdToken()
+
+      if (!token) {
+        throw new Error("Failed to get authentication token")
+      }
+
       const res = await fetch("/api/templates", {
         method: "POST",
         headers: {
@@ -131,15 +155,16 @@ export function CustomTemplateBuilder() {
       })
 
       if (res.ok) {
-        alert("Custom template saved! You can now use it to create tasks.")
+        toast.success("Custom template saved! You can now use it to create tasks.")
         router.push("/dashboard/templates")
       } else {
         const error = await res.json()
-        alert(error.error || "Failed to save template")
+        console.error("Template save error:", error)
+        toast.error(error.error || "Failed to save template")
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Save Template Error:", err)
-      alert("An error occurred while saving the template.")
+      toast.error(err.message || "An error occurred while saving the template.")
     } finally {
       setIsSaving(false)
     }

@@ -3,8 +3,10 @@
 import type React from "react"
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Upload, CheckCircle2, AlertCircle, Copy, Share2, FileText, Loader2 } from "lucide-react"
+import { Upload, CheckCircle2, AlertCircle, Copy, Share2, FileText, Loader2, Download } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
+import { toast } from "sonner"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
@@ -33,6 +35,8 @@ const staggerContainer = {
 
 export default function CreateTaskPage() {
   const router = useRouter()
+  const { user } = useAuth()
+
   // Form state
   const [taskTitle, setTaskTitle] = useState("")
   const [taskDescription, setTaskDescription] = useState("")
@@ -40,19 +44,11 @@ export default function CreateTaskPage() {
   const [deadline, setDeadline] = useState("")
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [dragActive, setDragActive] = useState(false)
-  const [verificationStep, setVerificationStep] = useState(0)
-  const [verificationComplete, setVerificationComplete] = useState(false)
-  const [verificationStatus, setVerificationStatus] = useState<"verified" | "flagged" | null>(null)
-  const [integrityScore, setIntegrityScore] = useState(0)
-  const [shareLink, setShareLink] = useState("")
-  const [isVerifying, setIsVerifying] = useState(false)
 
-  const verificationSteps = [
-    { name: "File Hashing", icon: "🔐" },
-    { name: "Metadata Capture", icon: "📋" },
-    { name: "Integrity Check", icon: "✓" },
-    { name: "AI Validation", icon: "🤖" },
-  ]
+  // Task creation state
+  const [isCreating, setIsCreating] = useState(false)
+  const [createdTaskId, setCreatedTaskId] = useState<string | null>(null)
+  const [taskCreated, setTaskCreated] = useState(false)
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -74,6 +70,8 @@ export default function CreateTaskPage() {
       const file = files[0]
       if (file.type === "application/pdf" || file.type.startsWith("image/")) {
         setUploadedFile(file)
+      } else {
+        toast.error("Please upload only images or PDF files")
       }
     }
   }
@@ -84,31 +82,106 @@ export default function CreateTaskPage() {
     }
   }
 
-  const startVerification = async () => {
-    if (!uploadedFile) return
-
-    setIsVerifying(true)
-    setVerificationStep(0)
-    setVerificationComplete(false)
-
-    // Simulate verification steps
-    for (let i = 0; i < verificationSteps.length; i++) {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setVerificationStep(i + 1)
+  const createTask = async () => {
+    if (!taskTitle) {
+      toast.error("Please enter a task title")
+      return
     }
 
-    // Simulate final results
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    const isVerified = Math.random() > 0.2
-    setVerificationStatus(isVerified ? "verified" : "flagged")
-    setIntegrityScore(Math.floor(Math.random() * 40) + 60)
-    setVerificationComplete(true)
-    setIsVerifying(false)
-    setShareLink(`https://projectforge.io/verify/${Math.random().toString(36).substr(2, 9)}`)
+    if (!user) {
+      toast.error("Please log in to create tasks")
+      return
+    }
+
+    setIsCreating(true)
+    try {
+      const token = await user.getIdToken()
+
+      // Create a simple task
+      const response = await fetch("/api/tasks/create-from-template", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: taskTitle,
+          description: taskDescription,
+          templateData: {
+            id: `custom-${Date.now()}`,
+            name: taskTitle,
+            category: category || "General Purpose",
+            steps: [
+              {
+                id: "step-1",
+                name: "Upload Proof",
+                description: "Upload proof of work completion",
+                order: 1,
+                isRequired: true,
+                proofType: "both"
+              }
+            ]
+          },
+          dueDate: deadline || null
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Failed to create task")
+      }
+
+      const { task } = await response.json()
+      setCreatedTaskId(task._id)
+      setTaskCreated(true)
+
+      // If file was uploaded, upload it to the first step
+      if (uploadedFile) {
+        await uploadProof(task._id, "step-1")
+      }
+
+      toast.success("Task created successfully!")
+    } catch (error: any) {
+      console.error("Error creating task:", error)
+      toast.error(error.message || "Failed to create task")
+    } finally {
+      setIsCreating(false)
+    }
   }
 
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(shareLink)
+  const uploadProof = async (taskId: string, stepId: string) => {
+    if (!uploadedFile || !user) return
+
+    try {
+      const token = await user.getIdToken()
+      const formData = new FormData()
+      formData.append("file", uploadedFile)
+
+      const response = await fetch(`/api/tasks/${taskId}/steps/${stepId}/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+
+      if (response.ok) {
+        toast.success("Proof uploaded successfully!")
+      } else {
+        toast.error("Failed to upload proof")
+      }
+    } catch (error) {
+      console.error("Error uploading proof:", error)
+      toast.error("Failed to upload proof")
+    }
+  }
+
+  const viewTask = () => {
+    if (createdTaskId) {
+      router.push(`/dashboard/tasks/${createdTaskId}`)
+    }
+  }
+
+  const viewAuditLog = () => {
+    router.push("/dashboard/audit-logs")
   }
 
   return (
@@ -144,7 +217,7 @@ export default function CreateTaskPage() {
                           placeholder="e.g., Complete project setup"
                           value={taskTitle}
                           onChange={(e) => setTaskTitle(e.target.value)}
-                          disabled={isVerifying || verificationComplete}
+                          disabled={isCreating || taskCreated}
                         />
                       </div>
 
@@ -155,7 +228,7 @@ export default function CreateTaskPage() {
                           placeholder="Describe the task in detail..."
                           value={taskDescription}
                           onChange={(e) => setTaskDescription(e.target.value)}
-                          disabled={isVerifying || verificationComplete}
+                          disabled={isCreating || taskCreated}
                           className="min-h-24"
                         />
                       </div>
@@ -167,7 +240,7 @@ export default function CreateTaskPage() {
                           <Select
                             value={category}
                             onValueChange={setCategory}
-                            disabled={isVerifying || verificationComplete}
+                            disabled={isCreating || taskCreated}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select category" />
@@ -187,7 +260,9 @@ export default function CreateTaskPage() {
                             type="date"
                             value={deadline}
                             onChange={(e) => setDeadline(e.target.value)}
-                            disabled={isVerifying || verificationComplete}
+                            disabled={isCreating || taskCreated}
+                            min={new Date().toISOString().split('T')[0]}
+                            max="2099-12-31"
                           />
                         </div>
                       </div>
@@ -200,7 +275,7 @@ export default function CreateTaskPage() {
               <motion.div variants={fadeInUp}>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Upload Proof</CardTitle>
+                    <CardTitle>Upload Proof (Optional)</CardTitle>
                     <CardDescription>Drag and drop or select image and PDF files</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -209,13 +284,12 @@ export default function CreateTaskPage() {
                       onDragLeave={handleDrag}
                       onDragOver={handleDrag}
                       onDrop={handleDrop}
-                      className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                        dragActive
+                      className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive
                           ? "border-primary bg-primary/5"
                           : uploadedFile
                             ? "border-green-300 bg-green-50"
                             : "border-border bg-background"
-                      }`}
+                        }`}
                     >
                       {uploadedFile ? (
                         <div className="space-y-3">
@@ -230,7 +304,7 @@ export default function CreateTaskPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setUploadedFile(null)}
-                            disabled={isVerifying || verificationComplete}
+                            disabled={isCreating || taskCreated}
                           >
                             Change File
                           </Button>
@@ -249,7 +323,7 @@ export default function CreateTaskPage() {
                             accept=".pdf,image/*"
                             onChange={handleFileInput}
                             className="absolute inset-0 opacity-0 cursor-pointer"
-                            disabled={isVerifying || verificationComplete}
+                            disabled={isCreating || taskCreated}
                           />
                           <Button variant="outline" size="sm" asChild>
                             <span>Select File</span>
@@ -262,189 +336,71 @@ export default function CreateTaskPage() {
                 </Card>
               </motion.div>
 
-              {/* Verification Flow Section */}
-              {uploadedFile && (
+              {/* Create Button */}
+              {!taskCreated && (
                 <motion.div variants={fadeInUp}>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Verification Process</CardTitle>
-                      <CardDescription>Real-time proof-of-work verification steps</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {/* Step Indicators */}
-                        <div className="space-y-4">
-                          {verificationSteps.map((step, index) => (
-                            <div key={index} className="flex items-center gap-4">
-                              <div
-                                className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                                  index < verificationStep
-                                    ? "bg-green-100 text-green-700"
-                                    : index === verificationStep
-                                      ? "bg-blue-100 text-blue-700"
-                                      : "bg-muted text-muted-foreground"
-                                }`}
-                              >
-                                {index < verificationStep ? "✓" : step.icon}
-                              </div>
-                              <div className="flex-1">
-                                <p className="font-medium text-foreground">{step.name}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {index < verificationStep && "Complete"}
-                                  {index === verificationStep && "In progress..."}
-                                  {index > verificationStep && "Waiting"}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium text-foreground">Overall Progress</span>
-                            <span className="text-sm text-muted-foreground">{((verificationStep / 4) * 100) | 0}%</span>
-                          </div>
-                          <Progress value={(verificationStep / 4) * 100} className="h-2" />
-                        </div>
-
-                        {/* Verification Button */}
-                        {!verificationComplete && (
-                          <Button
-                            onClick={startVerification}
-                            disabled={isVerifying || !uploadedFile || !taskTitle}
-                            className="w-full"
-                            size="lg"
-                          >
-                            {isVerifying ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Verifying...
-                              </>
-                            ) : (
-                              <>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Start Verification
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-
-              {/* Results Section */}
-              {verificationComplete && verificationStatus && (
-                <motion.div variants={fadeInUp}>
-                  <Card>
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle>Verification Result</CardTitle>
-                          <CardDescription>Your proof-of-work has been analyzed</CardDescription>
-                        </div>
-                        <Badge variant={verificationStatus === "verified" ? "default" : "destructive"}>
-                          {verificationStatus === "verified" ? "Verified" : "Flagged"}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-6">
-                        {/* Status Alert */}
-                        {verificationStatus === "verified" ? (
-                          <Alert>
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            <AlertDescription className="text-green-700">
-                              Your proof-of-work has been verified successfully. All integrity checks passed.
-                            </AlertDescription>
-                          </Alert>
-                        ) : (
-                          <Alert>
-                            <AlertCircle className="h-4 w-4 text-orange-600" />
-                            <AlertDescription className="text-orange-700">
-                              Your submission has been flagged for review. Please check the details below.
-                            </AlertDescription>
-                          </Alert>
-                        )}
-
-                        {/* Integrity Score */}
-                        <div className="bg-secondary/50 rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-foreground">Integrity Score</span>
-                            <span className="text-2xl font-bold text-primary">{integrityScore}%</span>
-                          </div>
-                          <Progress value={integrityScore} className="h-2" />
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {integrityScore >= 90
-                              ? "Excellent integrity - No issues detected"
-                              : integrityScore >= 70
-                                ? "Good integrity - Minor inconsistencies found"
-                                : "Low integrity - Please review the flagged items"}
-                          </p>
-                        </div>
-
-                        {/* Explanation */}
-                        <div>
-                          <h4 className="font-medium text-foreground mb-2">Analysis Details</h4>
-                          <div className="space-y-2 text-sm text-muted-foreground">
-                            <p>✓ File format validation passed</p>
-                            <p>✓ Metadata consistency verified</p>
-                            <p>✓ File integrity hash confirmed</p>
-                            {verificationStatus === "flagged" && <p>⚠ AI analysis detected potential modifications</p>}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-
-              {/* Actions Section */}
-              {verificationComplete && (
-                <motion.div variants={fadeInUp}>
-                  <Card
-                    className={
-                      verificationStatus === "verified"
-                        ? "border-green-200 bg-green-50/50"
-                        : "border-orange-200 bg-orange-50/50"
-                    }
+                  <Button
+                    onClick={createTask}
+                    disabled={!taskTitle || isCreating}
+                    className="w-full"
+                    size="lg"
                   >
+                    {isCreating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating Task...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Create Task
+                      </>
+                    )}
+                  </Button>
+                </motion.div>
+              )}
+
+              {/* Success Section */}
+              {taskCreated && createdTaskId && (
+                <motion.div variants={fadeInUp}>
+                  <Card className="border-green-200 bg-green-50/50">
                     <CardHeader>
-                      <CardTitle className={verificationStatus === "verified" ? "text-green-700" : "text-orange-700"}>
-                        {verificationStatus === "verified" ? "Verification Successful" : "Verification Flagged"}
-                      </CardTitle>
+                      <CardTitle className="text-green-700">Task Created Successfully!</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* Shareable Link */}
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-2 block">Shareable Proof Link</label>
-                        <div className="flex gap-2">
-                          <Input value={shareLink} readOnly className="text-xs" />
-                          <Button variant="outline" size="icon" onClick={copyShareLink} title="Copy to clipboard">
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Share this link to verify your proof with others
-                        </p>
-                      </div>
+                      <Alert>
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        <AlertDescription className="text-green-700">
+                          Your task has been created and saved to the database. {uploadedFile && "Proof has been uploaded."}
+                        </AlertDescription>
+                      </Alert>
 
                       {/* Action Buttons */}
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <Button className="flex-1" onClick={() => router.push("/dashboard/tasks")}>
-                          Save Verified Task
+                        <Button className="flex-1" onClick={viewTask}>
+                          <FileText className="w-4 h-4 mr-2" />
+                          View Task Details
                         </Button>
                         <Button
                           variant="outline"
                           className="flex-1 bg-transparent"
-                          onClick={() => router.push("/dashboard/audit-logs")}
+                          onClick={viewAuditLog}
                         >
                           View Audit Log
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => navigator.clipboard.writeText(shareLink)}>
-                          <Share2 className="w-4 h-4" />
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            setTaskTitle("")
+                            setTaskDescription("")
+                            setCategory("")
+                            setDeadline("")
+                            setUploadedFile(null)
+                            setTaskCreated(false)
+                            setCreatedTaskId(null)
+                          }}
+                        >
+                          Create Another
                         </Button>
                       </div>
                     </CardContent>

@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
-import { ArrowLeft, CheckCircle2, Clock, FileText, Upload, X, Copy, Share2, Lock, Globe, Mail, Sparkles } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Clock, FileText, Upload, X, Copy, Share2, Lock, Globe, Mail, Sparkles, Download } from "lucide-react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
@@ -21,10 +21,24 @@ const fadeInUp = {
 
 import { auth } from "@/lib/firebase"
 
-// Helper to format date
+// Helper to format date - ensures proper 4-digit year display
 const formatDate = (dateString?: string | Date) => {
   if (!dateString) return "—"
-  return new Date(dateString).toLocaleDateString()
+  try {
+    const date = new Date(dateString)
+    // Check if date is valid
+    if (isNaN(date.getTime())) return "—"
+
+    // Format with explicit locale to ensure proper year display
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  } catch (error) {
+    console.error("Date formatting error:", error)
+    return "—"
+  }
 }
 
 import { useEffect } from "react"
@@ -269,6 +283,37 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
 
   const copyProofLink = () => {
     navigator.clipboard.writeText(proofShareUrl)
+    toast.success("Link copied to clipboard!")
+  }
+
+  const downloadPDF = async () => {
+    if (!user) return
+
+    try {
+      const token = await user.getIdToken()
+      const response = await fetch(`/api/tasks/${taskId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to generate PDF")
+      }
+
+      // Create blob from response
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `task-${taskId}-proof.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success("PDF downloaded successfully!")
+    } catch (error) {
+      console.error("PDF download error:", error)
+      toast.error("Failed to download PDF")
+    }
   }
 
   return (
@@ -285,6 +330,12 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                 Back to Tasks
               </Button>
             </div>
+            {task.status === "completed" && (
+              <Button variant="outline" size="sm" onClick={downloadPDF}>
+                <Download className="w-4 h-4 mr-2" />
+                Download PDF
+              </Button>
+            )}
           </div>
         </header>
 
