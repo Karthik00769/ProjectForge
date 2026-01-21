@@ -14,13 +14,9 @@ const ProofLinkSchema = new Schema({
     visibility: {
         type: String,
         enum: ['private', 'restricted', 'public'],
-        default: 'private',
+        default: 'restricted', // Default to restricted (anyone with link)
     },
-    allowedEmails: [{
-        type: String,
-        lowercase: true,
-        trim: true,
-    }],
+    // REMOVED: allowedEmails - restricted mode now works like Google Drive (anyone with link)
     viewCount: {
         type: Number,
         default: 0,

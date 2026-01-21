@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
-import { ArrowLeft, CheckCircle2, Clock, FileText, Upload, X, Copy, Share2, Lock, Globe, Mail, Sparkles, Download } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Clock, FileText, Upload, X, Copy, Share2, Lock, Globe, Mail, Sparkles, Download, AlertTriangle, Eye } from "lucide-react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
@@ -228,6 +228,8 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
     switch (status) {
       case "completed":
         return <CheckCircle2 className="w-5 h-5 text-green-600" />
+      case "flagged":
+        return <AlertTriangle className="w-5 h-5 text-red-600" />
       case "in-progress":
         return <Clock className="w-5 h-5 text-blue-600" />
       case "pending":
@@ -241,6 +243,8 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
     switch (status) {
       case "completed":
         return <Badge className="bg-green-100 text-green-800">Completed</Badge>
+      case "flagged":
+        return <Badge className="bg-red-100 text-red-800">Flagged – Requires Attention</Badge>
       case "in-progress":
         return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>
       case "pending":
@@ -453,7 +457,19 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                       </div>
                                     )}
                                   </div>
-                                  <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                  {/* VIEW FILES BUTTON - RIGHT SIDE */}
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      // Open proof file in new tab (mock URL for now)
+                                      toast.info("File viewer coming soon - proof file would open here")
+                                    }}
+                                    className="flex-shrink-0"
+                                  >
+                                    <Eye className="w-4 h-4 mr-1" />
+                                    View Files
+                                  </Button>
                                 </div>
                               </div>
                             ) : (

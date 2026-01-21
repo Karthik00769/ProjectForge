@@ -2,9 +2,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const apiKey = process.env.GEMINI_API_KEY!;
 const genAI = new GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+// Using gemini-2.0-flash-exp - FREE TIER ONLY
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-// AI Use Case 1: Step Suggestion
+// AI Use Case 1: Step Suggestion (Contextual Assistance Only)
+// AI NEVER auto-saves, blocks task creation, or controls workflow
 export async function generateSteps(jobTitle: string): Promise<{ title: string; description: string }[]> {
     const prompt = `You are a helpful assistant for ProjectForge. 
   Generate a list of 3-5 standard professional steps for the job: "${jobTitle}".
@@ -25,11 +27,12 @@ export async function generateSteps(jobTitle: string): Promise<{ title: string; 
         return JSON.parse(cleanText);
     } catch (error) {
         console.error("Gemini Step Generation Error:", error);
+        // AI failure does NOT block app - return empty array
         return [];
     }
 }
 
-// AI Use Case 2: Basic Proof Text Extraction (OCR)
+// AI Use Case 2: Basic Proof Text Extraction (OCR) - Enrichment Only
 export async function extractTextFromBuffer(buffer: Buffer, mimeType: string): Promise<string> {
     // Gemini supports image/png, image/jpeg, image/webp, application/pdf
     // We strictly pass these types.
@@ -52,6 +55,7 @@ export async function extractTextFromBuffer(buffer: Buffer, mimeType: string): P
         return response.text().trim();
     } catch (error) {
         console.error("Gemini OCR Error:", error);
-        return ""; // Fail gracefully, OCR is enrichment only
+        // Fail gracefully, OCR is enrichment only - does NOT block upload
+        return "";
     }
 }

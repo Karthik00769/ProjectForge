@@ -73,17 +73,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
             return NextResponse.json({ error: "Step not found" }, { status: 404 });
         }
 
-        // Phase 8: Tamper Prevention
-        if (task.steps[stepIndex].status === "completed") {
-            await createAuditEntry({
-                userId: authUser.uid,
-                taskId: task._id.toString(),
-                action: "TAMPER_ATTEMPT",
-                details: `Attempt to overwrite completed step: ${stepId}`,
-                metadata: { stepId, fileHash },
-                integrityStatus: 'flagged'
-            });
-            return NextResponse.json({ error: "Step already completed. Proof is immutable." }, { status: 400 });
+        // FILE REPLACEMENT DETECTION
+        const existingHash = task.steps[stepIndex].fileHash;
+        let isReplacement = false;
+
+        if (task.steps[stepIndex].status === "completed" && existingHash) {
+            // File is being replaced - check if hash changed
+            if (existingHash !== fileHash) {
+                isReplacement = true;
+
+                // FLAG THE TASK
+                task.status = "flagged";
+                task.flaggedAt = new Date();
+
+                // Log file replacement with old and new hash
+                await createAuditEntry({
+                    userId: authUser.uid,
+                    taskId: task._id.toString(),
+                    action: "FILE_REPLACED",
+                    details: `File replaced for step: ${stepId}`,
+                    metadata: {
+                        stepId,
+                        oldHash: existingHash,
+                        newHash: fileHash,
+                        fileName: file.name
+                    },
+                    integrityStatus: 'flagged'
+                });
+            }
         }
 
         // 4. Create Proof Record
@@ -102,14 +119,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
         task.steps[stepIndex].status = "completed";
         task.steps[stepIndex].proofId = proof._id;
         task.steps[stepIndex].uploadedAt = new Date();
+        task.steps[stepIndex].fileHash = fileHash; // Store hash for future comparison
 
-        // Check if all steps are completed
-        const allCompleted = task.steps.every((s: any) => s.status === "completed");
-        if (allCompleted) {
-            task.status = "completed";
-            task.completionDate = new Date();
-        } else {
-            task.status = "in-progress";
+        // Check if all steps are completed (only if not flagged)
+        if (!isReplacement) {
+            const allCompleted = task.steps.every((s: any) => s.status === "completed");
+            if (allCompleted) {
+                task.status = "completed";
+                task.completionDate = new Date();
+            } else {
+                task.status = "in-progress";
+            }
         }
 
         await task.save();
@@ -128,6 +148,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
                 taskName: task.title
             }
         });
+
+        // Check if task was completed (not flagged)
+        const allCompleted = task.status === 'completed';
 
         if (allCompleted) {
             await createAuditEntry({

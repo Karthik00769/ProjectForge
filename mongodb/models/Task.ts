@@ -20,8 +20,11 @@ const TaskSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'in-progress', 'completed', 'verified'],
+        enum: ['pending', 'in-progress', 'completed', 'verified', 'flagged'],
         default: 'pending',
+    },
+    flaggedAt: {
+        type: Date,
     },
     completionDate: {
         type: Date,
@@ -41,6 +44,7 @@ const TaskSchema = new Schema({
             ref: 'Proof',
         },
         uploadedAt: Date,
+        fileHash: String, // Store hash for tamper detection
     }],
     createdAt: {
         type: Date,

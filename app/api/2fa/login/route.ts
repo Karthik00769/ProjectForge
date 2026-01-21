@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "@/lib/auth-server";
 import connectDB from "@/mongodb/db";
 import UserModel from "@/mongodb/models/User";
-import speakeasy from "speakeasy";
+// REMOVED: import speakeasy - no longer using TOTP/Authenticator apps
 import { decrypt } from "@/lib/crypto";
 import { createAuditEntry } from "@/lib/audit";
 import { getClientInfo } from "@/lib/client-info";
@@ -39,17 +39,13 @@ export async function POST(req: NextRequest) {
         const { ipHash, deviceFingerprintHash } = getClientInfo(req);
         let verified = false;
 
-        if (user.twoFactorMethod === 'totp' && user.twoFactorSecret) {
-            const secret = decrypt(user.twoFactorSecret);
-            verified = speakeasy.totp.verify({
-                secret: secret,
-                encoding: 'base32',
-                token: token,
-                window: 2
-            });
-        } else if (user.twoFactorMethod === 'pin' && user.twoFactorPin) {
+        // SECURITY PIN ONLY - REMOVED TOTP/Authenticator App Support
+        if (user.twoFactorMethod === 'pin' && user.twoFactorPin) {
             const pin = decrypt(user.twoFactorPin);
             verified = pin === token;
+        } else {
+            // If user somehow has old TOTP method, reject
+            return NextResponse.json({ error: "Invalid 2FA method. Please re-enable 2FA with Security PIN." }, { status: 400 });
         }
 
         if (!verified) {
@@ -57,17 +53,17 @@ export async function POST(req: NextRequest) {
             await createAuditEntry({
                 userId: user.uid,
                 action: "2FA_FAILED_ATTEMPT",
-                details: `Incorrect ${user.twoFactorMethod.toUpperCase()} entered during login`,
+                details: `Incorrect Security PIN entered during login`,
                 entityType: 'USER',
                 entityId: user._id.toString(),
                 ipHash,
                 deviceFingerprintHash,
                 metadata: {
-                    method: user.twoFactorMethod
+                    method: 'pin'
                 }
             });
 
-            return NextResponse.json({ error: `Invalid ${user.twoFactorMethod === 'pin' ? 'PIN' : '2FA code'}` }, { status: 401 });
+            return NextResponse.json({ error: `Invalid Security PIN` }, { status: 401 });
         }
 
         // 2FA Success
