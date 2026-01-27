@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { TEMPLATES, TEMPLATE_CATEGORIES } from "./template-config"
 
 import { useAuth } from "@/contexts/AuthContext"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -29,8 +29,27 @@ const staggerContainer = {
 
 export default function TemplatesPage() {
   const router = useRouter()
-  // We keep useAuth/useState if we want to add features later, but for now reverting to static view
   const { user } = useAuth()
+  const [customTemplates, setCustomTemplates] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Fetch custom templates from MongoDB
+  useEffect(() => {
+    async function fetchCustomTemplates() {
+      try {
+        const res = await fetch('/api/templates')
+        if (res.ok) {
+          const data = await res.json()
+          setCustomTemplates(data)
+        }
+      } catch (error) {
+        console.error('Error fetching custom templates:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchCustomTemplates()
+  }, [])
 
   const handleUseTemplate = (templateId: string) => {
     router.push(`/dashboard/templates/${templateId}`)
@@ -40,9 +59,24 @@ export default function TemplatesPage() {
     router.push(`/dashboard/templates/preview/${templateId}`)
   }
 
+  // Merge static templates with custom templates from MongoDB
+  const allTemplates = [
+    ...TEMPLATES,
+    ...customTemplates.map((t: any) => ({
+      id: t._id,
+      _id: t._id,
+      name: t.title,
+      description: t.description || 'Custom template',
+      category: t.category,
+      steps: t.steps,
+      stepCount: t.steps?.length || 0,
+      isCustom: true
+    }))
+  ]
+
   const groupedTemplates = TEMPLATE_CATEGORIES.map((cat) => ({
     ...cat,
-    templates: TEMPLATES.filter((t) => t.category === cat.category),
+    templates: allTemplates.filter((t) => t.category === cat.category),
   }))
 
   return (
@@ -93,7 +127,14 @@ export default function TemplatesPage() {
                         <motion.div key={template._id || template.id} variants={fadeInUp}>
                           <Card className="h-full hover:shadow-lg transition-shadow flex flex-col">
                             <CardHeader>
-                              <CardTitle className="text-lg">{template.name}</CardTitle>
+                              <div className="flex items-start justify-between gap-2">
+                                <CardTitle className="text-lg">{template.name}</CardTitle>
+                                {template.isCustom && (
+                                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                                    Custom
+                                  </Badge>
+                                )}
+                              </div>
                               <CardDescription>{template.description}</CardDescription>
                             </CardHeader>
 
@@ -117,7 +158,7 @@ export default function TemplatesPage() {
                                   )}
                                 </div>
                                 <Badge variant="secondary" className="mt-4">
-                                  {template.stepCount} steps
+                                  {template.stepCount || template.steps.length} steps
                                 </Badge>
                               </div>
 
