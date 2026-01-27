@@ -51,12 +51,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ proo
 
         if (link.visibility === 'restricted') {
             // Check if user is logged in AND their email is allowed
-            // NOTE: Current auth implementation might not expose email directly in verifyAuth object if using custom token only?
-            // verifyAuth returns { uid, email, ... } usually.
             if (!authUser || !authUser.email) {
                 return NextResponse.json({ error: "Access denied: Login required" }, { status: 401 });
             }
-            if (link.allowedEmails.includes(authUser.email)) {
+
+            const normalizedAllowed = (link.allowedEmails || []).map((e: string) => e.trim().toLowerCase());
+            const userEmail = authUser.email.trim().toLowerCase();
+
+            if (normalizedAllowed.includes(userEmail)) {
                 return serveFile(proof);
             }
             return NextResponse.json({ error: "Access denied: Email not authorized" }, { status: 403 });

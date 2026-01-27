@@ -458,11 +458,31 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => {
-                                      if (step.proofId) {
-                                        window.open(`/api/proof/${step.proofId}/raw`, '_blank');
-                                      } else {
+                                    onClick={async () => {
+                                      if (!step.proofId) {
                                         toast.error("Proof file not found");
+                                        return;
+                                      }
+
+                                      try {
+                                        let headers: Record<string, string> = {};
+                                        if (user) {
+                                          const token = await user.getIdToken();
+                                          headers["Authorization"] = `Bearer ${token}`;
+                                        }
+
+                                        const res = await fetch(`/api/proof/${step.proofId}/raw`, { headers });
+                                        if (!res.ok) throw new Error("Failed to load file");
+
+                                        const blob = await res.blob();
+                                        const url = window.URL.createObjectURL(blob);
+                                        window.open(url, '_blank');
+
+                                        // Cleanup after a delay to ensure new tab loads
+                                        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+                                      } catch (e) {
+                                        console.error(e);
+                                        toast.error("Could not view file. You may need to sign in.");
                                       }
                                     }}
                                     className="flex-shrink-0"

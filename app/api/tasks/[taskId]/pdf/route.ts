@@ -45,8 +45,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
 
         // Generate PDF
         const doc = new jsPDF();
-        // Explicitly attach autoTable
-        (doc as any).autoTable = autoTable;
 
         // Title
         doc.setFontSize(20);

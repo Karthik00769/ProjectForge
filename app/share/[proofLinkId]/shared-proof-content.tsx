@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 
 import { useState, useEffect } from "react"
+import { auth } from "@/lib/firebase"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -170,9 +171,31 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => {
-                                if (step.proofId) {
-                                  window.open(`/api/proof/${step.proofId}/raw`, '_blank');
+                              onClick={async () => {
+                                if (!step.proofId) return;
+                                try {
+                                  let headers: Record<string, string> = {};
+                                  const currentUser = auth.currentUser;
+                                  if (currentUser) {
+                                    const token = await currentUser.getIdToken();
+                                    headers["Authorization"] = `Bearer ${token}`;
+                                  }
+
+                                  const res = await fetch(`/api/proof/${step.proofId}/raw`, { headers });
+
+                                  if (res.status === 401 || res.status === 403) {
+                                    throw new Error("Access denied. Please ensure you are logged in with an authorized email.");
+                                  }
+
+                                  if (!res.ok) throw new Error("Failed to load file");
+
+                                  const blob = await res.blob();
+                                  const url = window.URL.createObjectURL(blob);
+                                  window.open(url, '_blank');
+                                  setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+
+                                } catch (e: any) {
+                                  alert(e.message || "Could not view file");
                                 }
                               }}
                               className="flex-shrink-0"
