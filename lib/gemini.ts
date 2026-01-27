@@ -1,15 +1,40 @@
-// Using Generative Language API (correct endpoint for your API key)
+// Dynamic model discovery for Generative Language API
 const apiKey = process.env.GEMINI_API_KEY!;
-
-// Correct endpoint for Generative Language API
 const API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-// Models available on Generative Language API
-const MODELS_TO_TRY = [
-    "models/gemini-1.5-flash",
-    "models/gemini-1.5-pro",
-    "models/gemini-pro"
-];
+// Cache for discovered models
+let availableModels: string[] | null = null;
+
+async function discoverAvailableModels(): Promise<string[]> {
+    if (availableModels !== null) return availableModels;
+
+    try {
+        console.log("Discovering available Gemini models for your API key...");
+        const response = await fetch(`${API_BASE_URL}/models?key=${apiKey}`);
+
+        if (!response.ok) {
+            console.error("Failed to list models:", response.status);
+            availableModels = [];
+            return [];
+        }
+
+        const data = await response.json();
+        const models = data.models || [];
+
+        // Filter for models that support generateContent
+        const discovered = models
+            .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+            .map((m: any) => m.name);
+
+        availableModels = discovered;
+        console.log(`✓ Found ${discovered.length} available models:`, discovered);
+        return discovered;
+    } catch (error) {
+        console.error("Error discovering models:", error);
+        availableModels = [];
+        return [];
+    }
+}
 
 async function generateContentDirect(modelName: string, contents: any) {
     const url = `${API_BASE_URL}/${modelName}:generateContent?key=${apiKey}`;
@@ -31,16 +56,26 @@ async function generateContentDirect(modelName: string, contents: any) {
 }
 
 async function generateWithFallback(contents: any) {
+    // First, discover what models are actually available
+    console.log("[GEMINI] Starting model discovery...");
+    const models = await discoverAvailableModels();
+
+    if (models.length === 0) {
+        console.warn("[GEMINI] No models available for this API key. AI features disabled.");
+        throw new Error("No models available");
+    }
+
+    console.log(`[GEMINI] Will try ${models.length} models in order`);
     let lastError;
 
-    for (const modelName of MODELS_TO_TRY) {
+    for (const modelName of models) {
         try {
-            console.log(`Attempting Generative Language API with: ${modelName}`);
+            console.log(`[GEMINI] Attempting: ${modelName}`);
             const result = await generateContentDirect(modelName, contents);
-            console.log(`✓ Success with: ${modelName}`);
+            console.log(`[GEMINI] ✓ Success with: ${modelName}`);
             return result;
         } catch (error: any) {
-            console.warn(`Failed with ${modelName}: ${error.message}`);
+            console.warn(`[GEMINI] ✗ Failed with ${modelName}: ${error.message}`);
             lastError = error;
         }
     }
