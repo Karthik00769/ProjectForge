@@ -5,9 +5,10 @@ const genAI = new GoogleGenerativeAI(apiKey);
 
 // List of models to try in order of preference/likelihood of availability
 const MODELS_TO_TRY = [
+    "gemini-2.0-flash-exp",
     "gemini-1.5-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-flash-001",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
     "gemini-1.0-pro",
     "gemini-pro"
 ];
