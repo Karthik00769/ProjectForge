@@ -6,7 +6,7 @@ import AuditLog from "@/mongodb/models/AuditLog";
 import Template from "@/mongodb/models/Template";
 import { verifyAuth } from "@/lib/auth-server";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// import autoTable from "jspdf-autotable";
 
 // Extend jsPDF type to include autoTable
 declare module "jspdf" {
@@ -45,8 +45,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
 
         // Generate PDF
         const doc = new jsPDF();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (doc as any).autoTable = autoTable;
+        // explicit usage with doc passed as first arg
+        // @ts-ignore
+        const autoTable = (await import("jspdf-autotable")).default;
 
         // Title
         doc.setFontSize(20);
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
             ];
         });
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: 75,
             head: [['#', 'Step', 'Status', 'Uploaded', 'Hash']],
             body: stepsData,
@@ -102,7 +103,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
             log.details || "—"
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             startY: finalY + 35,
             head: [['Timestamp', 'Action', 'Details']],
             body: auditData,
