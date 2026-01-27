@@ -23,9 +23,17 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function fetchProof() {
+    // We must wait for auth to initialization to correctly handle "restricted" links.
+    // Otherwise, we might send an unauthenticated request for a restricted link and get 403.
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       try {
-        const res = await fetch(`/api/public/proof/${proofLinkId}`);
+        let headers: Record<string, string> = {};
+        if (user) {
+          const token = await user.getIdToken();
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`/api/public/proof/${proofLinkId}`, { headers });
         if (!res.ok) {
           const errData = await res.json();
           throw new Error(errData.error || "Failed to load proof");
@@ -37,8 +45,9 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
       } finally {
         setLoading(false);
       }
-    }
-    fetchProof();
+    });
+
+    return () => unsubscribe();
   }, [proofLinkId]);
 
   if (loading) {

@@ -45,6 +45,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
 
         // Generate PDF
         const doc = new jsPDF();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (doc as any).autoTable = autoTable;
 
         // Title
         doc.setFontSize(20);

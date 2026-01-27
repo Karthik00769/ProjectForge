@@ -297,7 +297,8 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
       })
 
       if (!response.ok) {
-        throw new Error("Failed to generate PDF")
+        const err = await response.json();
+        throw new Error(err.error || "Failed to generate PDF")
       }
 
       // Create blob from response
@@ -465,7 +466,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                       }
 
                                       try {
-                                        let headers: Record<string, string> = {};
+                                        const headers: Record<string, string> = {};
                                         if (user) {
                                           const token = await user.getIdToken();
                                           headers["Authorization"] = `Bearer ${token}`;
