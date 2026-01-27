@@ -2,8 +2,35 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const apiKey = process.env.GEMINI_API_KEY!;
 const genAI = new GoogleGenerativeAI(apiKey);
-// Using gemini-1.5-flash-latest - Explicit Version as requested
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+// List of models to try in order of preference/likelihood of availability
+const MODELS_TO_TRY = [
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-flash-001",
+    "gemini-1.0-pro",
+    "gemini-pro"
+];
+
+// Helper to try models sequentially
+async function generateContentWithFallback(prompt: string | any[], isArrayInput = false) {
+    let lastError;
+    for (const modelName of MODELS_TO_TRY) {
+        try {
+            console.log(`Attempting Gemini with model: ${modelName}`);
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(prompt);
+            return result; // If successful, return immediately
+        } catch (error: any) {
+            console.warn(`Failed with model ${modelName}: ${error.message}`);
+            lastError = error;
+            // If error is NOT a 404 (Not Found), it might be something else (like quota), 
+            // but for now we assume we should try next model if 404 or similar.
+            // If it's 401 (Auth), trying other models won't help, but doesn't hurt.
+        }
+    }
+    throw lastError || new Error("All Gemini models failed.");
+}
 
 // AI Use Case 1: Step Suggestion (Contextual Assistance Only)
 // AI NEVER auto-saves, blocks task creation, or controls workflow
@@ -19,7 +46,7 @@ export async function generateSteps(jobTitle: string): Promise<{ title: string; 
   ]`;
 
     try {
-        const result = await model.generateContent(prompt);
+        const result = await generateContentWithFallback(prompt);
         const response = await result.response;
         const text = response.text();
         // Clean up potential markdown code blocks if the model ignores instruction
@@ -42,7 +69,7 @@ export async function extractTextFromBuffer(buffer: Buffer, mimeType: string): P
   If no text is found, return "No text detected."`;
 
     try {
-        const result = await model.generateContent([
+        const result = await generateContentWithFallback([
             prompt,
             {
                 inlineData: {
@@ -50,7 +77,7 @@ export async function extractTextFromBuffer(buffer: Buffer, mimeType: string): P
                     mimeType: mimeType,
                 },
             },
-        ]);
+        ], true);
         const response = await result.response;
         return response.text().trim();
     } catch (error) {
