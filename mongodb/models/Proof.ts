@@ -24,6 +24,10 @@ const ProofSchema = new Schema({
     fileType: {
         type: String,
     },
+    fileData: {
+        type: Buffer, // Store file content directly (limit < 16MB)
+        select: false, // Don't return by default for performance
+    },
     fileHash: {
         type: String, // SHA-256 hash for integrity
         required: true,

@@ -81,8 +81,6 @@ export default function MyTasksContent() {
         return <Clock className="w-5 h-5 text-blue-600" />
       case "pending":
         return <Clock className="w-5 h-5 text-gray-600" />
-      case "flagged":
-        return <AlertCircle className="w-5 h-5 text-red-600" />
       default:
         return null
     }
@@ -96,8 +94,6 @@ export default function MyTasksContent() {
         return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>
       case "pending":
         return <Badge variant="secondary">Pending</Badge>
-      case "flagged":
-        return <Badge variant="destructive">Flagged</Badge>
       default:
         return null
     }

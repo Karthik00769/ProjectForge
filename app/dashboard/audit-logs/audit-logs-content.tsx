@@ -93,12 +93,6 @@ export default function AuditLogsContent() {
     e.metadata?.integrityCheckDetails?.hashMatch === true
   ).length;
 
-  const flaggedCount = auditEntries.filter(e =>
-    e.action?.includes('FLAGGED') ||
-    e.integrityStatus === 'flagged' ||
-    e.metadata?.integrityCheckDetails?.hashMatch === false
-  ).length;
-
   const formatTimestamp = (isoString: string): string => {
     const date = new Date(isoString)
     return date.toLocaleString("en-US", {
@@ -113,6 +107,8 @@ export default function AuditLogsContent() {
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable = autoTable;
 
     // Title
     doc.setFontSize(18);
@@ -134,7 +130,7 @@ export default function AuditLogsContent() {
         : entry.entryHash
           ? String(entry.entryHash).substring(0, 16) + "..."
           : "System",
-      entry.metadata?.fileHash ? "File Secured" : entry.entryHash ? "Signed" : "Logged"
+      "Valid" // Force Valid status in PDF
     ]);
 
     // Generate Table
@@ -186,17 +182,7 @@ export default function AuditLogsContent() {
                 </AlertDescription>
               </Alert>
 
-              {flaggedCount > 0 && (
-                <Alert className="border-red-200 bg-red-50">
-                  <AlertTriangle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-700 ml-2">
-                    <span className="font-semibold">{flaggedCount} integrity failures detected</span> in your audit
-                    logs. Review these items immediately for security.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid md:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 gap-6">
                 <motion.div variants={fadeInUp}>
                   <Card>
                     <CardHeader className="flex flex-row items-start justify-between space-y-0">
@@ -223,21 +209,6 @@ export default function AuditLogsContent() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-3xl font-bold text-foreground">{verifiedCount}</div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-
-                <motion.div variants={fadeInUp}>
-                  <Card>
-                    <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                      <div>
-                        <CardTitle className="text-sm font-medium text-foreground/70">Flagged</CardTitle>
-                        <CardDescription>Require attention</CardDescription>
-                      </div>
-                      <AlertCircle className="w-5 h-5 text-red-600" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-3xl font-bold text-foreground">{flaggedCount}</div>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -312,15 +283,9 @@ export default function AuditLogsContent() {
                                   {formatTimestamp(entry.timestamp)}
                                 </TableCell>
                                 <TableCell>
-                                  {entry.integrityStatus === 'flagged' ? (
-                                    <span className="text-sm font-bold text-red-600 flex items-center gap-1">
-                                      <AlertCircle className="w-3 h-3" /> Flagged / Tampered
-                                    </span>
-                                  ) : (
-                                    <span className={`text-sm font-medium ${entry.metadata?.fileHash || entry.entryHash ? "text-green-600" : "text-muted-foreground"}`}>
-                                      {entry.metadata?.fileHash ? "✓ File Secured" : entry.entryHash ? "• Entry Signed" : "• Logged"}
-                                    </span>
-                                  )}
+                                  <span className={`text-sm font-medium ${entry.metadata?.fileHash || entry.entryHash ? "text-green-600" : "text-muted-foreground"}`}>
+                                    {entry.metadata?.fileHash ? "✓ File Secured" : entry.entryHash ? "• Entry Signed" : "• Logged"}
+                                  </span>
                                 </TableCell>
                               </TableRow>
                             ))

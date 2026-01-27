@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
 
 import { useState, useEffect } from "react"
 
@@ -166,6 +167,19 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
                               <p className="text-sm font-medium text-green-900">{step.uploadedFile}</p>
                               <p className="text-xs text-green-700">Uploaded on {step.uploadedDate}</p>
                             </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                if (step.proofId) {
+                                  window.open(`/api/proof/${step.proofId}/raw`, '_blank');
+                                }
+                              }}
+                              className="flex-shrink-0"
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              View Proof
+                            </Button>
                           </div>
                         </div>
                       )}

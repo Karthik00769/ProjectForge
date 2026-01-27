@@ -6,7 +6,7 @@ import AuditLog from "@/mongodb/models/AuditLog";
 import Template from "@/mongodb/models/Template";
 import { verifyAuth } from "@/lib/auth-server";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 
 // Extend jsPDF type to include autoTable
 declare module "jspdf" {
@@ -45,6 +45,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
 
         // Generate PDF
         const doc = new jsPDF();
+        // Explicitly attach autoTable
+        (doc as any).autoTable = autoTable;
 
         // Title
         doc.setFontSize(20);

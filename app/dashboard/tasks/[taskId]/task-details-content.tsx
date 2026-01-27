@@ -53,6 +53,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
   const [isUploading, setIsUploading] = useState(false)
   const [proofLinkVisibility, setProofLinkVisibility] = useState<"private" | "restricted" | "public">("private")
   const [restrictedEmails, setRestrictedEmails] = useState("")
+  const [isEditingEmails, setIsEditingEmails] = useState(false)
   // const [proofLinkId] = useState(() => {
   //   // Generate a unique proof link for completed tasks
   //   if (task && task.status === "completed") {
@@ -458,8 +459,11 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => {
-                                      // Open proof file in new tab (mock URL for now)
-                                      toast.info("File viewer coming soon - proof file would open here")
+                                      if (step.proofId) {
+                                        window.open(`/api/proof/${step.proofId}/raw`, '_blank');
+                                      } else {
+                                        toast.error("Proof file not found");
+                                      }
                                     }}
                                     className="flex-shrink-0"
                                   >
@@ -602,12 +606,56 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                       {proofLinkVisibility === "restricted" && (
                         <div className="space-y-3">
                           <label className="text-sm font-medium text-foreground">Allowed Emails</label>
-                          <Input
-                            placeholder="Enter emails separated by commas"
-                            value={restrictedEmails}
-                            onChange={(e) => setRestrictedEmails(e.target.value)}
-                            onBlur={handleEmailBlur}
-                          />
+                          {!isEditingEmails ? (
+                            <div className="flex items-start justify-between p-3 border border-border rounded-md bg-muted/50">
+                              <div className="text-sm">
+                                {restrictedEmails ? (
+                                  restrictedEmails.split(',').map((email, i) => (
+                                    <span key={i} className="inline-block bg-background border border-border rounded px-2 py-0.5 mr-2 mb-1 text-xs">
+                                      {email.trim()}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-muted-foreground italic">No emails allowed yet</span>
+                                )}
+                              </div>
+                              <Button variant="ghost" size="sm" onClick={() => setIsEditingEmails(true)} className="h-6 px-2">
+                                Edit
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <Input
+                                placeholder="Enter emails separated by commas"
+                                value={restrictedEmails}
+                                onChange={(e) => setRestrictedEmails(e.target.value)}
+                              />
+                              <div className="flex gap-2 justify-end">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    // Reset to last saved value (need to track it or just re-fetch? simplification: keep current input but toggle off?)
+                                    // Better to just fetch or keep a 'savedRestrictedEmails' ref.
+                                    // For now, allow cancel to just exit edit mode, user loses unsaved changes if they didn't click save?
+                                    // Actually, let's just toggle off.
+                                    setIsEditingEmails(false);
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    updateShareSettings("restricted", restrictedEmails);
+                                    setIsEditingEmails(false);
+                                  }}
+                                >
+                                  Save Access List
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                           <p className="text-xs text-muted-foreground">e.g., client@company.com, manager@company.com</p>
                         </div>
                       )}

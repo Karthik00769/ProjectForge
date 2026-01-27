@@ -43,7 +43,7 @@ const AuditLogSchema = new Schema({
         type: String, // Hash of the preceding entry
     },
     integrityStatus: {
-        type: String, // 'valid', 'flagged'
+        type: String, // 'valid'
         default: 'valid',
     },
     timestamp: {

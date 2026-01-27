@@ -115,7 +115,11 @@ export default function DashboardPage() {
       // Fallback to current state
     }
 
-    const doc = new jsPDF()
+    const doc = new jsPDF();
+    // Explicit global assignment for library compatibility
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable = autoTable;
+
     doc.setFontSize(22)
     doc.text("ProjectForge Performance Report", 14, 20)
     doc.setFontSize(12)
@@ -128,9 +132,9 @@ export default function DashboardPage() {
       ["Total Tasks", freshStats.total.toString(), "Active tasks this month"],
       ["Verified Tasks", freshStats.verified.toString(), "Successfully verified"],
       ["Security Events", (freshStats.securityEvents || 0).toString(), "Recorded in audit trail"]
-      // REMOVED Flagged Tasks
     ]
 
+    // Use autoTable as function directly passing doc
     autoTable(doc, {
       head: [statsData[0]],
       body: statsData.slice(1),
@@ -139,6 +143,7 @@ export default function DashboardPage() {
       headStyles: { fillColor: [79, 70, 229] }
     })
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     doc.text("Recent Highlights:", 14, (doc as any).lastAutoTable.finalY + 15)
 
     const activityRows = recentActivity.slice(0, 5).map(a => [
@@ -183,6 +188,26 @@ export default function DashboardPage() {
       bgColor: "bg-blue-100",
     },
   ]
+
+  // Safe date formatter
+  const formatDate = (dateString: string | number | Date) => {
+    try {
+      if (!dateString) return "Just now"
+      const date = new Date(dateString)
+      // Check if date is valid
+      if (isNaN(date.getTime())) return "Just now"
+
+      const now = new Date()
+      const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+
+      if (diffInHours < 24) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    } catch (e) {
+      return "Just now"
+    }
+  }
 
   return (
     <SidebarProvider>
@@ -259,7 +284,7 @@ export default function DashboardPage() {
                           <div className="flex items-center justify-center py-10">
                             <Clock className="w-6 h-6 animate-spin text-muted-foreground" />
                           </div>
-                        ) : recentActivity.length > 0 ? (
+                        ) : recentActivity && recentActivity.length > 0 ? (
                           recentActivity.map((item, i) => (
                             <div key={i} className="flex gap-4 group">
                               <div className="mt-1">
@@ -278,7 +303,7 @@ export default function DashboardPage() {
                                 </div>
                                 <p className="text-sm text-muted-foreground line-clamp-1">{item.description}</p>
                                 <p className="text-[10px] text-muted-foreground/60">
-                                  {new Date(item.timestamp).toLocaleString()}
+                                  {formatDate(item.timestamp)}
                                 </p>
                               </div>
                             </div>

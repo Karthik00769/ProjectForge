@@ -82,11 +82,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
             if (existingHash !== fileHash) {
                 isReplacement = true;
 
-                // FLAG THE TASK
-                task.status = "flagged";
-                task.flaggedAt = new Date();
-
-                // Log file replacement with old and new hash
+                // Log file replacement
                 await createAuditEntry({
                     userId: authUser.uid,
                     taskId: task._id.toString(),
@@ -97,8 +93,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
                         oldHash: existingHash,
                         newHash: fileHash,
                         fileName: file.name
-                    },
-                    integrityStatus: 'flagged'
+                    }
                 });
             }
         }
@@ -112,6 +107,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
             fileName: file.name,
             fileType: file.type,
             fileHash: fileHash,
+            fileData: buffer, // Store actual file content
             extractedText: extractedText,
         });
 

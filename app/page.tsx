@@ -45,6 +45,12 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <Link
+              href="/auth/sign-in"
+              className="text-foreground/70 hover:text-foreground transition font-medium mr-2"
+            >
+              Sign In
+            </Link>
+            <Link
               href="/auth/sign-up"
               className="px-6 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition font-medium"
             >
@@ -338,46 +344,6 @@ export default function Home() {
                 <li>
                   <a href="#security" className="hover:text-foreground transition">
                     Security
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Company</h4>
-              <ul className="space-y-2 text-sm text-foreground/60">
-                <li>
-                  <Link href="/privacy" className="hover:text-foreground transition">
-                    Privacy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms" className="hover:text-foreground transition">
-                    Terms
-                  </Link>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition">
-                    Contact
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-foreground mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm text-foreground/60">
-                <li>
-                  <Link href="/privacy" className="hover:text-foreground transition">
-                    Privacy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms" className="hover:text-foreground transition">
-                    Terms
-                  </Link>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-foreground transition">
-                    Cookies
                   </a>
                 </li>
               </ul>
