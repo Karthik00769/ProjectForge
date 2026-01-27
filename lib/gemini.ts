@@ -1,19 +1,18 @@
-// Direct REST API implementation to bypass SDK v1beta limitation
+// Using Generative Language API (correct endpoint for your API key)
 const apiKey = process.env.GEMINI_API_KEY!;
 
-// Use v1 API endpoint (stable) instead of v1beta
-const API_BASE_URL = "https://generativelanguage.googleapis.com/v1";
+// Correct endpoint for Generative Language API
+const API_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-// Models to try (free tier compatible)
+// Models available on Generative Language API
 const MODELS_TO_TRY = [
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro",
-    "gemini-pro"
+    "models/gemini-1.5-flash",
+    "models/gemini-1.5-pro",
+    "models/gemini-pro"
 ];
 
 async function generateContentDirect(modelName: string, contents: any) {
-    const url = `${API_BASE_URL}/models/${modelName}:generateContent?key=${apiKey}`;
+    const url = `${API_BASE_URL}/${modelName}:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
         method: 'POST',
@@ -36,20 +35,20 @@ async function generateWithFallback(contents: any) {
 
     for (const modelName of MODELS_TO_TRY) {
         try {
-            console.log(`Attempting Gemini v1 API with model: ${modelName}`);
+            console.log(`Attempting Generative Language API with: ${modelName}`);
             const result = await generateContentDirect(modelName, contents);
-            console.log(`✓ Success with model: ${modelName}`);
+            console.log(`✓ Success with: ${modelName}`);
             return result;
         } catch (error: any) {
-            console.warn(`Failed with model ${modelName}: ${error.message}`);
+            console.warn(`Failed with ${modelName}: ${error.message}`);
             lastError = error;
         }
     }
 
-    throw lastError || new Error("All Gemini models failed");
+    throw lastError || new Error("All models failed");
 }
 
-// AI Use Case 1: Step Suggestion (Contextual Assistance Only)
+// AI Use Case 1: Step Suggestion
 export async function generateSteps(jobTitle: string): Promise<{ title: string; description: string }[]> {
     const prompt = `You are a helpful assistant for ProjectForge. 
 Generate a list of 3-5 standard professional steps for the job: "${jobTitle}".
@@ -74,7 +73,7 @@ Example structure:
     }
 }
 
-// AI Use Case 2: Basic Proof Text Extraction (OCR) - Enrichment Only
+// AI Use Case 2: OCR Text Extraction
 export async function extractTextFromBuffer(buffer: Buffer, mimeType: string): Promise<string> {
     const prompt = `Extract all visible text from this document/image. 
 Return ONLY the extracted text. Do not add commentary or formatting. 
