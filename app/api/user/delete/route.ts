@@ -5,6 +5,7 @@ import UserModel from "@/mongodb/models/User";
 import TaskModel from "@/mongodb/models/Task";
 import ProofModel from "@/mongodb/models/Proof";
 import ProofLinkModel from "@/mongodb/models/ProofLink";
+import AuditLogModel from "@/mongodb/models/AuditLog";
 import { adminAuth } from "@/lib/firebase-admin";
 import { getClientInfo } from "@/lib/client-info";
 import { createAuditEntry } from "@/lib/audit";
@@ -85,22 +86,20 @@ export async function DELETE(req: NextRequest) {
             deviceFingerprintHash
         });
 
-        // 2. Clear sensitive user data but keep the record (Soft Delete)
-        // We delete Tasks and Proofs as requested, but we MUST keep AuditLogs.
+        // 2. Clear ALL user data (Hard Delete as requested)
         await Task.deleteMany({ userId: authUser.uid });
         await Proof.deleteMany({ userId: authUser.uid });
         await ProofLink.deleteMany({ userId: authUser.uid });
 
-        // Mark as deleted and clear personal info
-        user.isDeleted = true;
-        user.deletedAt = new Date();
-        user.email = `deleted_${authUser.uid}@projectforge.internal`; // Anonymize email
-        user.displayName = "Deleted User";
-        user.photoURL = "";
-        user.twoFactorEnabled = false;
-        user.twoFactorSecret = undefined;
-        user.twoFactorPin = undefined;
-        await user.save();
+        // Check if AuditLog model is available and delete (Fix 7: Zero logs requirement)
+        const AuditLog = mongoose.models.AuditLog || AuditLogModel;
+        if (AuditLog) {
+            await AuditLog.deleteMany({ userId: authUser.uid });
+        }
+
+        // Hard Delete User Profile
+        await User.deleteOne({ uid: authUser.uid });
+        // No need to anonymize if we delete.
 
         // 3. Delete user from Firebase Auth to prevent further login
         try {

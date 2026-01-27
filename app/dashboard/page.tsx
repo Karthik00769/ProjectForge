@@ -89,20 +89,46 @@ export default function DashboardPage() {
     }
   }, [user]);
 
-  const handleExportStats = () => {
+  const handleExportStats = async () => {
+    // FIX 2: Fetch LIVE data
+    let freshStats = { ...stats };
+    try {
+      const token = await user?.getIdToken();
+      if (token) {
+        const res = await fetch(`/api/dashboard/stats?t=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Assuming API returns { stats: { total, verified, pending, securityEvents, ... } }
+          // We map API response to our local stats structure if needed, or just use it.
+          // API actually returns "stats" object as per our view_file of route.ts earlier.
+          freshStats = data.stats;
+
+          // Also update UI state while we are at it, though not strictly required for PDF fix alone
+          setStats(freshStats);
+          if (data.recentActivity) setRecentActivity(data.recentActivity);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch live stats for PDF", e);
+      // Fallback to current state
+    }
+
     const doc = new jsPDF()
     doc.setFontSize(22)
     doc.text("ProjectForge Performance Report", 14, 20)
     doc.setFontSize(12)
     doc.text(`User Index: ${mongoUser?.email || user?.email}`, 14, 32)
     doc.text(`Report Period: ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`, 14, 40)
+    doc.text(`Generated: ${new Date().toLocaleTimeString()}`, 14, 48)
 
     const statsData = [
       ["Stat Title", "Value", "Description"],
-      ["Total Tasks", stats.total.toString(), "Active tasks this month"],
-      ["Verified Tasks", stats.verified.toString(), "Successfully verified"],
-      ["Security Events", stats.securityEvents.toString(), "Recorded in audit trail"],
-      ["Flagged Tasks", stats.flagged.toString(), "Require attention"]
+      ["Total Tasks", freshStats.total.toString(), "Active tasks this month"],
+      ["Verified Tasks", freshStats.verified.toString(), "Successfully verified"],
+      ["Security Events", (freshStats.securityEvents || 0).toString(), "Recorded in audit trail"]
+      // REMOVED Flagged Tasks
     ]
 
     autoTable(doc, {
@@ -155,14 +181,6 @@ export default function DashboardPage() {
       icon: ShieldCheck,
       color: "text-blue-600",
       bgColor: "bg-blue-100",
-    },
-    {
-      title: "Flagged Tasks",
-      value: stats.flagged.toString(),
-      description: "Require attention",
-      icon: Flag,
-      color: "text-red-600",
-      bgColor: "bg-red-100",
     },
   ]
 
@@ -285,7 +303,6 @@ export default function DashboardPage() {
                         {[
                           { label: "Verified", value: stats.verified, total: stats.total, color: "bg-green-600" },
                           { label: "Pending", value: stats.pending, total: stats.total, color: "bg-blue-600" },
-                          { label: "Flagged", value: stats.flagged, total: stats.total, color: "bg-red-600" },
                         ].map((status, i) => {
                           const percentage = status.total > 0 ? (status.value / status.total) * 100 : 0
                           return (

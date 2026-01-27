@@ -2,8 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const apiKey = process.env.GEMINI_API_KEY!;
 const genAI = new GoogleGenerativeAI(apiKey);
-// Using gemini-2.0-flash-exp - FREE TIER ONLY
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+// Using gemini-1.5-flash - Latest Stable Free Tier Model
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // AI Use Case 1: Step Suggestion (Contextual Assistance Only)
 // AI NEVER auto-saves, blocks task creation, or controls workflow

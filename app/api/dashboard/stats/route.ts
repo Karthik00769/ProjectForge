@@ -28,11 +28,9 @@ export async function GET(req: NextRequest) {
         const totalTasks = tasks.length;
         const pendingTasks = tasks.filter((t: any) => t.status === 'pending' || t.status === 'in-progress').length;
         const verifiedTasks = tasks.filter((t: any) => t.status === 'verified' || t.status === 'completed').length;
-        const flaggedTasks = tasks.filter((t: any) => t.status === 'flagged').length;
 
         // Count security events (Audit Logs)
         const totalEvents = await AuditLog.countDocuments({ userId: authUser.uid });
-        const flaggedEvents = await AuditLog.countDocuments({ userId: authUser.uid, integrityStatus: 'flagged' });
 
         // Fetch recent activity from AuditLogs
         const recentLogs = await AuditLog.find({ userId: authUser.uid })
@@ -45,7 +43,7 @@ export async function GET(req: NextRequest) {
             title: log.action.replace(/_/g, ' '),
             description: log.details,
             timestamp: log.timestamp,
-            status: log.integrityStatus === 'flagged' ? 'Flagged' : (log.entryHash ? 'Signed' : 'Logged'),
+            status: log.entryHash ? 'Signed' : 'Logged',
         }));
 
         return NextResponse.json({
@@ -53,8 +51,6 @@ export async function GET(req: NextRequest) {
                 total: totalTasks,
                 verified: verifiedTasks,
                 pending: pendingTasks,
-                flagged: flaggedTasks, // Flagged tasks count
-                flaggedEvents: flaggedEvents, // Flagged audit events count
                 securityEvents: totalEvents
             },
             recentActivity: activity

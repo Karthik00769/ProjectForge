@@ -228,8 +228,6 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
     switch (status) {
       case "completed":
         return <CheckCircle2 className="w-5 h-5 text-green-600" />
-      case "flagged":
-        return <AlertTriangle className="w-5 h-5 text-red-600" />
       case "in-progress":
         return <Clock className="w-5 h-5 text-blue-600" />
       case "pending":
@@ -243,8 +241,6 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
     switch (status) {
       case "completed":
         return <Badge className="bg-green-100 text-green-800">Completed</Badge>
-      case "flagged":
-        return <Badge className="bg-red-100 text-red-800">Flagged – Requires Attention</Badge>
       case "in-progress":
         return <Badge className="bg-blue-100 text-blue-800">In Progress</Badge>
       case "pending":
@@ -334,7 +330,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                 Back to Tasks
               </Button>
             </div>
-            {task.status === "completed" && (
+            {task && (
               <Button variant="outline" size="sm" onClick={downloadPDF}>
                 <Download className="w-4 h-4 mr-2" />
                 Download PDF

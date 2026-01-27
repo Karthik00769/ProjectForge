@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
 
         const { taskId } = await params;
         const body = await req.json();
-        const { visibility } = body; // REMOVED: allowedEmails
+        const { visibility, allowedEmails } = body;
 
         if (!['private', 'restricted', 'public'].includes(visibility)) {
             return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
@@ -67,12 +67,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
                 taskId,
                 userId: authUser.uid,
                 visibility,
-                // REMOVED: allowedEmails
+                allowedEmails: visibility === 'restricted' ? allowedEmails : [],
                 isActive: true
             });
         } else {
             link.visibility = visibility;
-            // REMOVED: allowedEmails update
+            link.allowedEmails = visibility === 'restricted' ? allowedEmails : [];
             link.updatedAt = new Date();
             await link.save();
         }
@@ -87,8 +87,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
                 details: `Proof link visibility set to ${visibility}`,
                 metadata: {
                     previousVisibility,
-                    newVisibility: visibility
-                    // REMOVED: allowedEmailsCount
+                    newVisibility: visibility,
+                    allowedEmailsCount: allowedEmails?.length || 0
                 }
             });
         }

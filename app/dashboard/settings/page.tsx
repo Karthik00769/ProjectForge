@@ -165,7 +165,8 @@ export default function SettingsPage() {
       doc.text(`Display Name: ${mongoUser.displayName || "Not set"}`, 14, 52);
       doc.text(`Email Address: ${mongoUser.email}`, 14, 60);
       doc.text(`Account UID: ${mongoUser.uid}`, 14, 68);
-      doc.text(`Account Created: ${new Date(mongoUser.createdAt).toLocaleDateString()}`, 14, 76);
+      const createdDate = mongoUser.createdAt ? new Date(mongoUser.createdAt) : new Date();
+      doc.text(`Account Created: ${isNaN(createdDate.getTime()) ? "N/A" : createdDate.toLocaleDateString()}`, 14, 76);
 
       // Security Section
       doc.setFontSize(16);
@@ -448,7 +449,7 @@ export default function SettingsPage() {
                           {/* PIN Option - Simple & Creative */}
                           <div
                             onClick={() => setIsPinDialogOpen(true)}
-                            className="p-5 rounded-2xl border-2 border-border border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
+                            className="p-5 rounded-2xl border-2 border-border border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group col-span-2"
                           >
                             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                               <Key className="w-5 h-5 text-primary" />
@@ -459,23 +460,6 @@ export default function SettingsPage() {
                             </p>
                             <div className="mt-4 flex items-center text-xs font-semibold text-primary">
                               Setup PIN <ArrowRight className="w-3 h-3 ml-1" />
-                            </div>
-                          </div>
-
-                          {/* App Option */}
-                          <div
-                            onClick={handleEnable2faInit}
-                            className="p-5 rounded-2xl border-2 border-border border-dashed hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
-                          >
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                              <Smartphone className="w-5 h-5 text-primary" />
-                            </div>
-                            <h5 className="font-bold mb-1">Authenticator App</h5>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                              Standard protection using apps like Google Authenticator or Authy.
-                            </p>
-                            <div className="mt-4 flex items-center text-xs font-semibold text-primary">
-                              Scan QR Code <ArrowRight className="w-3 h-3 ml-1" />
                             </div>
                           </div>
                         </div>
