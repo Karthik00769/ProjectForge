@@ -5,18 +5,13 @@
 ## The Problem
 
 **Did you actually do the work?**
-
 For millions of workers—plumbers, electricians, delivery drivers, construction workers, domestic helpers, field agents, and daily-wage laborers—proving completed work is hard.
 
 * No clear record of finished tasks
-* Payment disputes due to lack of evidence
-* Skills and experience go unrecognized
-* No verifiable work history for future jobs
-
-Work gets done.
-Proof doesn’t.
-
-ProjectForge fixes that.
+* Payment disputes due to missing evidence
+* Skills stay invisible
+* No verifiable work history
+  Work gets done. Proof doesn’t. ProjectForge fixes that.
 
 ## Who This Is For
 
@@ -47,222 +42,151 @@ Vocational training students
 Interns
 Skill development programs
 Project-based learning
-
 Anyone who does real work deserves real proof.
-
 
 ## What It Does
 
-ProjectForge helps workers:
+ProjectForge lets workers:
 
-* Document work using photos and simple steps
-* Lock proof with timestamps so it can’t be altered later
-* Share verification links with clients or employers
-* Build a verified work history
-* Resolve payment disputes using cryptographic evidence
-
-No technical knowledge needed.
-Just a smartphone.
-
-
+* Capture proof using photos
+* Lock proof with timestamps
+* Share verification links
+* Build a verifiable work history
+* Resolve disputes with cryptographic evidence
+  No technical skills. Just a smartphone.
 
 ## How It Works
 
 ### Step 1: Create a Task
 
-Choose from ready-made templates like:
+Use ready templates:
 
 * Electrical installation
 * Plumbing repair
 * Home cleaning
 * Delivery completion
 * Construction milestones
-* Farm work documentation
-
-Or create your own by describing the job in simple words.
-
-
+* Farm work
+  Or write your own task in plain language.
 
 ### Step 2: Upload Proof
 
-* Photos during work
-* Photos after completion
+* During-work photos
+* After-completion photos
 * Optional notes
-
-Everything is automatically timestamped.
-
-
+  Everything is timestamped automatically.
 
 ### Step 3: Lock the Proof
 
-* Every file gets a unique digital fingerprint (hash)
-* Files can’t be backdated or silently replaced
-* Any change is detected and flagged
-
-Original proof is always preserved.
-
-
+* Each file gets a unique hash
+* Files can’t be replaced or backdated
+* Any change is detected
+  Original proof stays intact.
 
 ### Step 4: Share & Verify
 
-* Generate a shareable link
-* Send it to the client, employer, or supervisor
-* Work is verified
-* Payment decisions become straightforward
-
-
+* Generate a link
+* Share with client or employer
+* Work gets verified
+* Payment decisions get simple
 
 ## Real-World Examples
 
 **Electrician**
-Task: Home wiring installation
-Before photos → installation → testing
-Client verifies → payment released
-
+Before → install → test → verify → paid
 **Delivery Worker**
-Task: Package delivery
-Pickup photo → delivery photos → signatures
-Employer verifies → daily wage confirmed
-
+Pickup → delivery photos → verify → wage confirmed
 **Construction Worker**
-Task: Wall plastering
-Before → during → finished → quality check
-Contractor verifies → milestone approved
-
+Before → during → finish → approve milestone
 **Domestic Worker**
-Task: Daily cleaning
-Before/after photos
-Homeowner verifies → weekly payment settled
-
-
+Before/after cleaning → weekly payment settled
 
 ## Why It Matters
 
 ### For Workers
 
-* Fewer payment disputes
-* Verifiable work history
+* Fewer disputes
+* Real work history
 * Better opportunities
 * Fair treatment
-* Evidence speaks for itself
 
-### For Employers & Clients
+### For Employers
 
-* Verify work before payment
-* Track progress clearly
-* Reduce disputes
-* Maintain quality records
+* Verify before paying
+* Clear progress tracking
+* Fewer conflicts
 
 ### For Society
 
-* Invisible labor becomes visible
-* Informal workers gain documentation
-* Hiring based on skills, not claims
-* Fair wages backed by proof
-
-
+* Informal work becomes visible
+* Skills beat claims
+* Proof backs fair wages
 
 ## Proof That Can’t Be Faked
 
 ### Cryptographic Hashing
 
-Each uploaded file gets a unique SHA-256 hash.
-If a file changes, the system detects it instantly.
+Every file is hashed using SHA-256. Change the file and the hash breaks.
 
 ### Immutable Timestamps
 
-Every action has a fixed date and time.
-No edits. No backdating.
+Every action is time-locked. No edits. No backdating.
 
 ### Audit Trail
 
 * Task creation
 * Proof uploads
 * Views and verification
-* Any changes
-
-Everything is recorded. Nothing is hidden.
-
-
+* Any attempted changes
 
 ## Sharing & Verification
 
 ### Access Levels
 
-* **Private** – only you
-* **Restricted** – people you share with
-* **Public** – anyone with the link
-
-No approvals.
-No waiting.
-Just verification.
-
-
+* Private – only you
+* Restricted – selected viewers
+* Public – anyone with the link
+  No approvals. No waiting. Just proof.
 
 ## Language & Accessibility
 
-* Simple interface
-* Visual, photo-based workflow
-* Offline uploads (coming soon)
-* Multi-language support (coming soon)
-
-
+* Simple UI
+* Photo-first workflow
+* Offline uploads (planned)
+* Multi-language support (planned)
 
 ## Security & Privacy
 
 * You own your data
-* Delete anytime — everything is removed
+* Delete anytime
 * No data selling
-* Encrypted file storage
-
-Authentication:
-
+* Encrypted storage
+  Authentication:
 * Email/password
 * Google Sign-In
 * Optional 6-digit PIN
 
+## Tech Stack
 
+Built with simplicity and accessibility in mind:
 
-## Pricing
-
-**Free Tier**
-
-* 50 tasks per month
-* Unlimited proof uploads
-* Shareable verification links
-
-**Pro – $5/month**
-
-* Unlimited tasks
-* Custom templates
-* Analytics
-* Priority support
-
-**Community Tier (NGOs)**
-
-* Free bulk access
-* Training programs
-* Custom setup
-
-
+* Next.js – fast, mobile-optimized web app
+* MongoDB – scalable data storage
+* Firebase – secure authentication
+* Gemini AI – smart workflow suggestions
+* SHA-256 – tamper-proof file verification
+* Hosting platform – Vercel
 
 ## What This Is NOT
 
 * Not a job board
-* Not a payment platform
+* Not a payment system
 * Not social media
 * Not a time tracker
-
-ProjectForge doesn’t find work or process payments.
-It proves the work happened.
-
-
+  ProjectForge doesn’t find work or move money. It proves the work happened.
 
 ## Our Mission
 
 Every worker deserves recognition.
-
-Whether you’re building, delivering, repairing, cleaning, or caring—
-your work matters.
-
-ProjectForge makes sure it’s seen and verified.
+If you build, deliver, repair, clean, or care your work matters.
+ProjectForge makes it undeniable.
