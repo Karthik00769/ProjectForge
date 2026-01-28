@@ -5,7 +5,7 @@
 ## The Problem
 
 **Did you actually do the work?**
-For millions of workers—plumbers, electricians, delivery drivers, construction workers, domestic helpers, field agents, and daily-wage laborers—proving completed work is hard.
+For millions of workers—plumbers, electricians, delivery drivers, construction workers, domestic helpers, field agents, and daily-wage laborers proving completed work is hard.
 
 * No clear record of finished tasks
 * Payment disputes due to missing evidence
