@@ -1,7 +1,3 @@
-Got it. Same structure. Same flow. Just cleaned so you can **paste over it** without fighting the text.
-
----
-
 # ProjectForge
 
 **Proof that work happened.**
@@ -21,8 +17,6 @@ Work gets done.
 Proof doesn’t.
 
 ProjectForge fixes that.
-
----
 
 ## Who This Is For
 
@@ -56,7 +50,6 @@ Project-based learning
 
 Anyone who does real work deserves real proof.
 
----
 
 ## What It Does
 
@@ -71,7 +64,7 @@ ProjectForge helps workers:
 No technical knowledge needed.
 Just a smartphone.
 
----
+
 
 ## How It Works
 
@@ -88,7 +81,7 @@ Choose from ready-made templates like:
 
 Or create your own by describing the job in simple words.
 
----
+
 
 ### Step 2: Upload Proof
 
@@ -98,7 +91,7 @@ Or create your own by describing the job in simple words.
 
 Everything is automatically timestamped.
 
----
+
 
 ### Step 3: Lock the Proof
 
@@ -108,7 +101,7 @@ Everything is automatically timestamped.
 
 Original proof is always preserved.
 
----
+
 
 ### Step 4: Share & Verify
 
@@ -117,7 +110,7 @@ Original proof is always preserved.
 * Work is verified
 * Payment decisions become straightforward
 
----
+
 
 ## Real-World Examples
 
@@ -141,7 +134,7 @@ Task: Daily cleaning
 Before/after photos
 Homeowner verifies → weekly payment settled
 
----
+
 
 ## Why It Matters
 
@@ -167,7 +160,7 @@ Homeowner verifies → weekly payment settled
 * Hiring based on skills, not claims
 * Fair wages backed by proof
 
----
+
 
 ## Proof That Can’t Be Faked
 
@@ -190,7 +183,7 @@ No edits. No backdating.
 
 Everything is recorded. Nothing is hidden.
 
----
+
 
 ## Sharing & Verification
 
@@ -204,7 +197,7 @@ No approvals.
 No waiting.
 Just verification.
 
----
+
 
 ## Language & Accessibility
 
@@ -213,7 +206,7 @@ Just verification.
 * Offline uploads (coming soon)
 * Multi-language support (coming soon)
 
----
+
 
 ## Security & Privacy
 
@@ -228,7 +221,7 @@ Authentication:
 * Google Sign-In
 * Optional 6-digit PIN
 
----
+
 
 ## Pricing
 
@@ -251,7 +244,7 @@ Authentication:
 * Training programs
 * Custom setup
 
----
+
 
 ## What This Is NOT
 
@@ -263,7 +256,7 @@ Authentication:
 ProjectForge doesn’t find work or process payments.
 It proves the work happened.
 
----
+
 
 ## Our Mission
 
