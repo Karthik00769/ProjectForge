@@ -1,208 +1,275 @@
+Got it. Same structure. Same flow. Just cleaned so you can **paste over it** without fighting the text.
+
+---
+
 # ProjectForge
 
-## A simple idea, done seriously
+**Proof that work happened.**
 
-ProjectForge exists for one reason: **to prove that real work actually happened**.
-Not productivity. Not motivation. Not vibes.
-Just clear, honest proof.
+## The Problem
 
+**Did you actually do the work?**
 
-## Why this exists
-Everywhere you look, people are asked the same question:
+For millions of workers—plumbers, electricians, delivery drivers, construction workers, domestic helpers, field agents, and daily-wage laborers—proving completed work is hard.
 
-> “Did you really do the work?”
+* No clear record of finished tasks
+* Payment disputes due to lack of evidence
+* Skills and experience go unrecognized
+* No verifiable work history for future jobs
 
-Electricians, freelancers, delivery workers, employees, students, service professionals — everyone runs into this.
+Work gets done.
+Proof doesn’t.
 
-Right now, proof usually means screenshots, photos, PDFs, or messages. And everyone knows the truth:
-* Screenshots can be edited
-* Files can be replaced
-* Logs can be deleted
-* Claims can be faked
+ProjectForge fixes that.
 
-ProjectForge was built to end that ambiguity.
+---
 
-## What ProjectForge actually does
-ProjectForge is a web app where:
-* You create a task
-* You complete real steps
-* You upload real proof
-* The system locks that proof with cryptographic hashes
-* Every action is permanently logged
+## Who This Is For
 
-If anything changes later, it shows.
-No hiding. No rewriting history.
+### Field Workers & Skilled Labor
 
+Plumbers, electricians, carpenters
+Construction workers, painters, masons
+Delivery personnel, logistics agents
+Maintenance and repair technicians
 
-## Who this is for
-This is for anyone who wants their work to speak for itself:
-* Electricians & technicians
-* Field workers & service staff
-* Freelancers & contractors
-* Employees & interns
-* Students
-* Small businesses
-* Individuals
+### Service Providers
 
-If you can do the work, ProjectForge helps you prove it.
+Domestic workers, caregivers
+Cleaning and sanitation staff
+Security personnel
+Agricultural workers
 
+### Gig Economy Workers
 
+Freelancers and contractors
+On-demand service providers
+Remote workers
+Part-time and casual laborers
 
-## How tasks work (in plain terms)
-A **task** is one piece of work you want to prove.
+### Students & Learners
 
-Each task includes:
-* A title
-* Clear steps
-* Proof files (photos or PDFs)
-* A status
-* A shareable link
+Vocational training students
+Interns
+Skill development programs
+Project-based learning
 
-You complete the steps, upload proof, and mark the task done.
+Anyone who does real work deserves real proof.
 
-That’s it.
+---
 
+## What It Does
 
-## Proof files & tamper detection
-When you upload a file:
-* The system generates a unique hash
-* That hash is stored in the database
-* The file becomes verifiable
+ProjectForge helps workers:
 
-If the file is ever replaced:
-* A new hash is generated
-* The old hash is preserved
-* The task is automatically **flagged**
+* Document work using photos and simple steps
+* Lock proof with timestamps so it can’t be altered later
+* Share verification links with clients or employers
+* Build a verified work history
+* Resolve payment disputes using cryptographic evidence
 
-The task no longer says “Completed”.
-It clearly shows **“Flagged – Requires Attention”**.
+No technical knowledge needed.
+Just a smartphone.
 
-Nothing is hidden.
+---
 
+## How It Works
 
+### Step 1: Create a Task
 
-## Audit logs (they don’t disappear)
-Every important action is recorded:
+Choose from ready-made templates like:
+
+* Electrical installation
+* Plumbing repair
+* Home cleaning
+* Delivery completion
+* Construction milestones
+* Farm work documentation
+
+Or create your own by describing the job in simple words.
+
+---
+
+### Step 2: Upload Proof
+
+* Photos during work
+* Photos after completion
+* Optional notes
+
+Everything is automatically timestamped.
+
+---
+
+### Step 3: Lock the Proof
+
+* Every file gets a unique digital fingerprint (hash)
+* Files can’t be backdated or silently replaced
+* Any change is detected and flagged
+
+Original proof is always preserved.
+
+---
+
+### Step 4: Share & Verify
+
+* Generate a shareable link
+* Send it to the client, employer, or supervisor
+* Work is verified
+* Payment decisions become straightforward
+
+---
+
+## Real-World Examples
+
+**Electrician**
+Task: Home wiring installation
+Before photos → installation → testing
+Client verifies → payment released
+
+**Delivery Worker**
+Task: Package delivery
+Pickup photo → delivery photos → signatures
+Employer verifies → daily wage confirmed
+
+**Construction Worker**
+Task: Wall plastering
+Before → during → finished → quality check
+Contractor verifies → milestone approved
+
+**Domestic Worker**
+Task: Daily cleaning
+Before/after photos
+Homeowner verifies → weekly payment settled
+
+---
+
+## Why It Matters
+
+### For Workers
+
+* Fewer payment disputes
+* Verifiable work history
+* Better opportunities
+* Fair treatment
+* Evidence speaks for itself
+
+### For Employers & Clients
+
+* Verify work before payment
+* Track progress clearly
+* Reduce disputes
+* Maintain quality records
+
+### For Society
+
+* Invisible labor becomes visible
+* Informal workers gain documentation
+* Hiring based on skills, not claims
+* Fair wages backed by proof
+
+---
+
+## Proof That Can’t Be Faked
+
+### Cryptographic Hashing
+
+Each uploaded file gets a unique SHA-256 hash.
+If a file changes, the system detects it instantly.
+
+### Immutable Timestamps
+
+Every action has a fixed date and time.
+No edits. No backdating.
+
+### Audit Trail
+
 * Task creation
-* Proof upload
-* File replacement
-* Status change
-* Security changes
+* Proof uploads
+* Views and verification
+* Any changes
 
-Audit logs are:
-* Append-only
-* Permanent
-* Not editable
-* Not deletable
+Everything is recorded. Nothing is hidden.
 
-Even you can’t erase your own history.
+---
 
-That’s the point.
+## Sharing & Verification
 
-## Sharing your work
-Every completed task generates a link.
+### Access Levels
 
-By default, it’s **Restricted**.
+* **Private** – only you
+* **Restricted** – people you share with
+* **Public** – anyone with the link
 
-You can choose:
-* **Private** – only you can view
-* **Restricted** – anyone with the link (like Google Drive)
-* **Public** – anyone
-
-No email whitelists.
 No approvals.
-Just controlled visibility.
+No waiting.
+Just verification.
 
-## Templates (for speed, not control)
-Predefined templates
-ProjectForge includes ready-made templates for common work:
-* Electrician jobs
-* Client delivery
-* Service visits
-* Field inspections
+---
 
-They auto-fill steps so you don’t start from scratch.
+## Language & Accessibility
 
-### Custom templates
-If your work is different, you can:
-* Create your own template
-* Add as many steps as you want
-* Reuse it anytime
+* Simple interface
+* Visual, photo-based workflow
+* Offline uploads (coming soon)
+* Multi-language support (coming soon)
 
-Nothing is locked.
+---
 
+## Security & Privacy
 
-## AI (used lightly, on purpose)
-AI is **not** the product.
-It’s only used to:
+* You own your data
+* Delete anytime — everything is removed
+* No data selling
+* Encrypted file storage
 
-* Explain templates
-* Suggest possible steps
-* Help users who don’t know where to start
+Authentication:
 
-Model used:
-* Gemini Flash 2.5 (free tier)
-If AI fails, everything still works.
+* Email/password
+* Google Sign-In
+* Optional 6-digit PIN
 
+---
 
-## Security, without the drama
-Authentication
-* Email + password
-* Google sign-in
-* Firebase Authentication
+## Pricing
 
-### Two-factor protection
-There is only one 2FA method:
-* A 6-digit security PIN
+**Free Tier**
 
-No authenticator apps.
-No QR codes.
+* 50 tasks per month
+* Unlimited proof uploads
+* Shareable verification links
 
-The PIN is:
-* Encrypted at rest
-* Required at login
-* Logged in audit logs
+**Pro – $5/month**
 
+* Unlimited tasks
+* Custom templates
+* Analytics
+* Priority support
 
-## Deleting your account means deleting everything
-When you permanently delete your account:
-* All tasks are deleted
-* All proof files are deleted
-* All audit logs are deleted
-* All stats are deleted
+**Community Tier (NGOs)**
 
-Logging in again starts fresh.
-No ghosts. No leftovers.
+* Free bulk access
+* Training programs
+* Custom setup
 
+---
 
-## The dashboard
-Your dashboard shows:
-* Total tasks
-* Completed tasks
-* Flagged tasks
-* Recent activity
+## What This Is NOT
 
-Everything updates in real time.
-What you see is always the truth.
-
-
-
-## Tech stack (for builders)
-* **Frontend:** Next.js, Tailwind CSS, Framer Motion
-* **Backend:** Next.js API routes, Node.js
-* **Auth:** Firebase Authentication
-* **Database:** MongoDB
-* **AI:** Gemini Flash 2.5
-
-
-## What ProjectForge is not
-* Not a to-do list
-* Not a tracker
+* Not a job board
+* Not a payment platform
 * Not social media
-* Not a resume builder
+* Not a time tracker
 
-It doesn’t tell you to work.
-It proves that you did.
+ProjectForge doesn’t find work or process payments.
+It proves the work happened.
 
-## Status
-Production-ready MVP.
+---
+
+## Our Mission
+
+Every worker deserves recognition.
+
+Whether you’re building, delivering, repairing, cleaning, or caring—
+your work matters.
+
+ProjectForge makes sure it’s seen and verified.
