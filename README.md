@@ -171,7 +171,7 @@ Every action is time-locked. No edits. No backdating.
 Built with simplicity and accessibility in mind:
 
 * Next.js – fast, mobile-optimized web app
-* Tailwind CSS – styling and responsive design
+* Tailwind CSS and Framer Motion – styling and responsive design
 * MongoDB – scalable data storage
 * Firebase – secure authentication
 * Gemini AI – smart workflow suggestions
