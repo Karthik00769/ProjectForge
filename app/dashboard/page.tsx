@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { CheckCircle2, AlertCircle, Flag, Clock, Download, MoreVertical, ShieldCheck, Wifi, WifiOff, Calendar } from "lucide-react"
+import { CheckCircle2, AlertCircle, Flag, Clock, Download, MoreVertical, ShieldCheck, Calendar } from "lucide-react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,7 @@ import autoTable from "jspdf-autotable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { authenticatedFetch, ConnectionMonitor, getNetworkAwareOptions } from "@/lib/network-utils"
+import { authenticatedFetch, getNetworkAwareOptions } from "@/lib/network-utils"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -65,18 +65,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [connectionQuality, setConnectionQuality] = useState<string>('fast')
-
-  // Monitor connection quality
-  useEffect(() => {
-    const monitor = ConnectionMonitor.getInstance()
-    const unsubscribe = monitor.onQualityChange(setConnectionQuality)
-    const stopMonitoring = monitor.startMonitoring()
-
-    return () => {
-      unsubscribe()
-      stopMonitoring()
-    }
-  }, [])
 
   useEffect(() => {
     async function fetchStats() {
@@ -245,28 +233,7 @@ export default function DashboardPage() {
     }
   }
 
-  // Connection quality indicator
-  const ConnectionIndicator = () => {
-    const getIndicatorProps = () => {
-      switch (connectionQuality) {
-        case 'slow':
-          return { icon: Wifi, color: 'text-yellow-600', text: 'Slow Connection' }
-        case 'unstable':
-          return { icon: WifiOff, color: 'text-red-600', text: 'Unstable Connection' }
-        default:
-          return { icon: Wifi, color: 'text-green-600', text: 'Good Connection' }
-      }
-    }
-
-    const { icon: Icon, color, text } = getIndicatorProps()
-    
-    return (
-      <div className={`flex items-center gap-2 text-sm ${color}`}>
-        <Icon className="w-4 h-4" />
-        <span>{text}</span>
-      </div>
-    )
-  }
+  // Connection quality indicator - removed as per requirements
 
   // Loading skeleton
   if (loading) {
@@ -455,7 +422,6 @@ export default function DashboardPage() {
               </Badge>
             </div>
             <div className="flex items-center gap-4">
-              <ConnectionIndicator />
               <Button variant="outline" size="sm" onClick={handleExportStats}>
                 <Download className="w-4 h-4 mr-2" />
                 Export

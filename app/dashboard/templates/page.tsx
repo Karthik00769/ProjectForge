@@ -1,6 +1,6 @@
 "use client"
 import { motion } from "framer-motion"
-import { Briefcase, Zap, ArrowRight, Copy, CheckCircle2, Eye, Wifi, WifiOff, Loader2 } from "lucide-react"
+import { Briefcase, Zap, ArrowRight, Copy, CheckCircle2, Eye, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { DashboardSidebar } from "@/components/dashboard-sidebar"
@@ -13,7 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 import { useAuth } from "@/contexts/AuthContext"
 import { useState, useEffect } from "react"
-import { networkFetch, authenticatedFetch, ConnectionMonitor, getNetworkAwareOptions } from "@/lib/network-utils"
+import { networkFetch, authenticatedFetch, getNetworkAwareOptions } from "@/lib/network-utils"
 import { toast } from "sonner"
 
 const fadeInUp = {
@@ -38,18 +38,6 @@ export default function TemplatesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [connectionQuality, setConnectionQuality] = useState<string>('fast')
   const [error, setError] = useState<string | null>(null)
-
-  // Monitor connection quality
-  useEffect(() => {
-    const monitor = ConnectionMonitor.getInstance()
-    const unsubscribe = monitor.onQualityChange(setConnectionQuality)
-    const stopMonitoring = monitor.startMonitoring()
-
-    return () => {
-      unsubscribe()
-      stopMonitoring()
-    }
-  }, [])
 
   // Fetch custom templates with network stability
   useEffect(() => {
@@ -90,10 +78,12 @@ export default function TemplatesPage() {
   }, [user, connectionQuality])
 
   const handleUseTemplate = (templateId: string) => {
+    console.log('🎯 Using template with ID:', templateId)
     router.push(`/dashboard/templates/${templateId}`)
   }
 
   const handlePreviewTemplate = (templateId: string) => {
+    console.log('👁️ Previewing template with ID:', templateId)
     router.push(`/dashboard/templates/preview/${templateId}`)
   }
 
@@ -117,28 +107,7 @@ export default function TemplatesPage() {
     templates: allTemplates.filter((t) => t.category === cat.category),
   }))
 
-  // Connection quality indicator
-  const ConnectionIndicator = () => {
-    const getIndicatorProps = () => {
-      switch (connectionQuality) {
-        case 'slow':
-          return { icon: Wifi, color: 'text-yellow-600', text: 'Slow Connection' }
-        case 'unstable':
-          return { icon: WifiOff, color: 'text-red-600', text: 'Unstable Connection' }
-        default:
-          return { icon: Wifi, color: 'text-green-600', text: 'Good Connection' }
-      }
-    }
-
-    const { icon: Icon, color, text } = getIndicatorProps()
-    
-    return (
-      <div className={`flex items-center gap-2 text-sm ${color}`}>
-        <Icon className="w-4 h-4" />
-        <span>{text}</span>
-      </div>
-    )
-  }
+  // Connection quality indicator - removed as per requirements
 
   // Loading skeleton
   if (isLoading) {
@@ -152,7 +121,6 @@ export default function TemplatesPage() {
                 <SidebarTrigger />
                 <h1 className="text-xl font-semibold text-foreground">Task Templates</h1>
               </div>
-              <ConnectionIndicator />
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6 lg:p-8">
@@ -201,7 +169,6 @@ export default function TemplatesPage() {
               <SidebarTrigger />
               <h1 className="text-xl font-semibold text-foreground">Task Templates</h1>
             </div>
-            <ConnectionIndicator />
           </div>
         </header>
 
@@ -284,13 +251,13 @@ export default function TemplatesPage() {
 
                               {/* CTA Buttons */}
                               <div className="space-y-2">
-                                <Button onClick={() => handleUseTemplate(template.id)} className="w-full">
+                                <Button onClick={() => handleUseTemplate(template._id || template.id)} className="w-full">
                                   <Copy className="w-4 h-4 mr-2" />
                                   Use Template
                                 </Button>
                                 <Button
                                   variant="outline"
-                                  onClick={() => handlePreviewTemplate(template.id)}
+                                  onClick={() => handlePreviewTemplate(template._id || template.id)}
                                   className="w-full"
                                 >
                                   <Eye className="w-4 h-4 mr-2" />

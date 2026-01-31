@@ -6,7 +6,10 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint .",
-    "start": "next start"
+    "start": "next start",
+    "restore-and-fix-data": "ts-node scripts/restore-and-fix-data.ts",
+    "debug-template-flow": "ts-node scripts/debug-template-flow.ts",
+    "verify-data-isolation": "ts-node scripts/verify-data-isolation.ts"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
