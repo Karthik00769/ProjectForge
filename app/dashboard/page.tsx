@@ -247,7 +247,6 @@ export default function DashboardPage() {
                 <SidebarTrigger />
                 <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
               </div>
-              <ConnectionIndicator />
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6 lg:p-8">
@@ -323,7 +322,6 @@ export default function DashboardPage() {
                 <SidebarTrigger />
                 <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
               </div>
-              <ConnectionIndicator />
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6 lg:p-8">
