@@ -1,6 +1,11 @@
 import mongoose, { Schema, model, models } from 'mongoose';
 
 const TemplateSchema = new Schema({
+    userId: {
+        type: String, // Firebase UID - REQUIRED for data isolation
+        required: true,
+        index: true,
+    },
     title: {
         type: String,
         required: true,
@@ -21,9 +26,13 @@ const TemplateSchema = new Schema({
         icon: { type: String, required: false }, // Optional icon for the step
     }],
     createdBy: {
-        type: String, // 'system' or userId
+        type: String, // 'system' or userId - DEPRECATED, use userId instead
         required: true,
         default: 'system'
+    },
+    isSystemTemplate: {
+        type: Boolean,
+        default: false, // true for built-in templates, false for user-created
     },
     createdAt: {
         type: Date,
