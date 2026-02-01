@@ -59,12 +59,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (firebaseUser) {
                 setUser(firebaseUser);
                 await syncUser();
+                
+                // Handle post-auth redirect
+                if (typeof window !== "undefined") {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const redirectPath = urlParams.get("redirect");
+                    if (redirectPath) {
+                        // Clear the redirect param and navigate
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.delete("redirect");
+                        window.history.replaceState({}, "", newUrl.toString());
+                        router.replace(decodeURIComponent(redirectPath));
+                        return;
+                    }
+                }
             } else {
                 setUser(null);
                 setMongoUser(null);
                 // Hard redirect if trying to access dashboard while not logged in
                 if (typeof window !== "undefined" && window.location.pathname.startsWith("/dashboard")) {
-                    router.replace("/auth/sign-in");
+                    const currentPath = window.location.pathname;
+                    router.replace(`/auth/sign-in?redirect=${encodeURIComponent(currentPath)}`);
                 }
             }
             setLoading(false);

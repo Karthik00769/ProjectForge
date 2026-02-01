@@ -4,19 +4,25 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { AuthProvider } from "@/contexts/AuthContext"
-import { Toaster } from "@/components/ui/toaster" // Or sonner, likely toaster is in ui/toaster or ui/sonner. Based on file list it has components/ui/toaster.tsx but also sonner.tsx. Usually Toaster comes from toaster.tsx if using shadcn/ui toast, or sonner.tsx if using sonner. I'll guess toaster.tsx first or check file list again.
-// Re-checking file list: create mode 100644 components/ui/toaster.tsx, create mode 100644 components/ui/sonner.tsx.
-// Standard shadcn uses Toaster from the file named toaster.tsx usually, or sonner.
-// I'll stick to standard toaster import first. if it fails i'll check.
+import { Toaster } from "@/components/ui/sonner"
+import { ErrorBoundary } from "@/components/error-boundary"
+import { ThemeProvider } from "@/components/theme-provider"
 
+const geist = Geist({ 
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+})
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const geistMono = Geist_Mono({ 
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+})
 
 export const metadata: Metadata = {
   title: "ProjectForge - Verifiable Proof of Work Platform",
   description: "Trust-based work and task verification platform with evidence, audit logs, and tamper detection.",
   generator: "v0.app",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
   icons: {
     icon: [
       {
@@ -34,6 +40,7 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
+  manifest: "/manifest.json",
 }
 
 export default function RootLayout({
@@ -42,12 +49,35 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body className={`font-sans antialiased`}>
-        <AuthProvider>
-          {children}
-          <Toaster />
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}>
+        <ErrorBoundary>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AuthProvider>
+              <div className="min-h-screen bg-background text-foreground">
+                {children}
+              </div>
+              <Toaster 
+                position="top-right"
+                expand={false}
+                richColors
+                closeButton
+                toastOptions={{
+                  style: {
+                    background: 'hsl(var(--background))',
+                    border: '1px solid hsl(var(--border))',
+                    color: 'hsl(var(--foreground))',
+                  },
+                }}
+              />
+            </AuthProvider>
+          </ThemeProvider>
+        </ErrorBoundary>
         <Analytics />
       </body>
     </html>

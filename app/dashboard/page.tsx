@@ -11,12 +11,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { toastUtils } from "@/lib/toast-utils"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { authenticatedFetch, getNetworkAwareOptions } from "@/lib/network-utils"
+import { authenticatedFetch, getNetworkAwareOptions, ConnectionMonitor } from "@/lib/network-utils"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -65,6 +67,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [connectionQuality, setConnectionQuality] = useState<string>('fast')
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     async function fetchStats() {
@@ -95,7 +98,13 @@ export default function DashboardPage() {
       } catch (err: any) {
         console.error('Dashboard fetch error:', err);
         setError(err.message || 'Failed to load dashboard data');
-        toast.error('Failed to load dashboard. Please try again.');
+        toastUtils.error('Failed to load dashboard', {
+          description: 'Please check your connection and try again',
+          action: {
+            label: 'Retry',
+            onClick: () => fetchStats()
+          }
+        });
       } finally {
         setLoading(false);
       }
@@ -226,10 +235,12 @@ export default function DashboardPage() {
       })
 
       doc.save(`projectforge-report-${freshStats.monthly.monthKey}-${Date.now()}.pdf`)
-      toast.success("Performance report downloaded")
+      toastUtils.data.exported("Performance report")
     } catch (error: any) {
       console.error('Export error:', error);
-      toast.error('Failed to export report. Please try again.');
+      toastUtils.error('Failed to export report', {
+        description: 'Please try again or contact support if the issue persists'
+      });
     }
   }
 
@@ -410,19 +421,19 @@ export default function DashboardPage() {
 
       <SidebarInset>
         <header className="border-b border-border sticky top-0 z-30 bg-background/95 backdrop-blur">
-          <div className="flex items-center justify-between h-16 px-6 lg:px-8">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-2 sm:gap-4">
               <SidebarTrigger />
-              <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
-              <Badge variant="outline" className="text-xs">
+              <h1 className="text-lg sm:text-xl font-semibold text-foreground">Dashboard</h1>
+              <Badge variant="outline" className="text-xs hidden sm:inline-flex">
                 <Calendar className="w-3 h-3 mr-1" />
                 {stats.monthly.monthKey}
               </Badge>
             </div>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={handleExportStats}>
-                <Download className="w-4 h-4 mr-2" />
-                Export
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="outline" size={isMobile ? "sm" : "sm"} onClick={handleExportStats}>
+                <Download className="w-4 h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -444,9 +455,9 @@ export default function DashboardPage() {
         </header>
 
         <main className="flex-1 overflow-auto">
-          <div className="p-6 lg:p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {error && (
-              <Alert className="mb-6 border-red-200 bg-red-50">
+              <Alert className="mb-4 sm:mb-6 border-red-200 bg-red-50">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="text-red-800">
                   {error}
@@ -454,25 +465,25 @@ export default function DashboardPage() {
               </Alert>
             )}
 
-            <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-8">
+            <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-6 sm:space-y-8">
               {/* Overview Cards with Monthly Data */}
-              <div className="grid md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {overviewCards.map((card, i) => {
                   const IconComponent = card.icon
                   return (
                     <motion.div key={i} variants={fadeInUp}>
                       <Card className="hover:shadow-lg transition-shadow">
-                        <CardHeader className="flex flex-row items-start justify-between space-y-0">
-                          <div>
-                            <CardTitle className="text-sm font-medium text-foreground/70">{card.title}</CardTitle>
-                            <CardDescription className="mt-1">{card.description}</CardDescription>
-                          </div>
-                          <IconComponent className={`w-5 h-5 ${card.color}`} />
-                        </CardHeader>
-                        <CardContent>
+                        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                           <div className="space-y-1">
-                            <div className="text-3xl font-bold text-foreground">{card.value}</div>
-                            <div className="text-sm text-muted-foreground">
+                            <CardTitle className="text-sm font-medium text-foreground/70">{card.title}</CardTitle>
+                            <CardDescription className="text-xs">{card.description}</CardDescription>
+                          </div>
+                          <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 ${card.color} flex-shrink-0`} />
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-1">
+                            <div className="text-2xl sm:text-3xl font-bold text-foreground">{card.value}</div>
+                            <div className="text-xs sm:text-sm text-muted-foreground">
                               <span className="font-medium text-primary">{card.monthlyValue}</span> this month
                             </div>
                           </div>

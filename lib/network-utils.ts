@@ -6,6 +6,7 @@ export interface RetryOptions {
   maxDelay?: number;
   timeout?: number;
   retryCondition?: (error: any) => boolean;
+  onRetry?: (attempt: number, error: any) => void;
 }
 
 export interface NetworkResponse<T = any> {
@@ -13,82 +14,125 @@ export interface NetworkResponse<T = any> {
   error?: string;
   success: boolean;
   retries: number;
+  duration?: number;
 }
 
-// Default retry condition - retry on network errors, timeouts, and 5xx errors
+// Enhanced retry condition - more comprehensive error detection
 const defaultRetryCondition = (error: any): boolean => {
   if (!error) return false;
   
   // Network errors
   if (error.name === 'TypeError' && error.message.includes('fetch')) return true;
-  if (error.message?.includes('timeout')) return true;
-  if (error.message?.includes('network')) return true;
+  if (error.name === 'AbortError') return false; // Don't retry user-cancelled requests
+  if (error.message?.toLowerCase().includes('timeout')) return true;
+  if (error.message?.toLowerCase().includes('network')) return true;
+  if (error.message?.toLowerCase().includes('connection')) return true;
+  if (error.message?.toLowerCase().includes('dns')) return true;
   
-  // HTTP errors
+  // HTTP errors that should be retried
   if (error.status >= 500) return true;
   if (error.status === 408) return true; // Request timeout
   if (error.status === 429) return true; // Rate limit
+  if (error.status === 502) return true; // Bad gateway
+  if (error.status === 503) return true; // Service unavailable
+  if (error.status === 504) return true; // Gateway timeout
   
   return false;
 };
 
-// Exponential backoff with jitter
-const calculateDelay = (attempt: number, baseDelay: number, maxDelay: number): number => {
-  const exponentialDelay = Math.min(baseDelay * Math.pow(2, attempt - 1), maxDelay);
-  const jitter = Math.random() * 0.1 * exponentialDelay;
+// Exponential backoff with jitter and connection quality awareness
+const calculateDelay = (
+  attempt: number, 
+  baseDelay: number, 
+  maxDelay: number,
+  connectionQuality: string = 'fast'
+): number => {
+  // Adjust base delay based on connection quality
+  let adjustedBaseDelay = baseDelay;
+  switch (connectionQuality) {
+    case 'slow':
+      adjustedBaseDelay = baseDelay * 1.5;
+      break;
+    case 'unstable':
+      adjustedBaseDelay = baseDelay * 2;
+      break;
+  }
+
+  const exponentialDelay = Math.min(adjustedBaseDelay * Math.pow(2, attempt - 1), maxDelay);
+  const jitter = Math.random() * 0.3 * exponentialDelay; // Increased jitter
   return exponentialDelay + jitter;
 };
 
-// Network-safe fetch with retry logic and timeout
+// Enhanced network-safe fetch with comprehensive error handling
 export async function networkFetch<T = any>(
   url: string, 
   options: RequestInit = {}, 
   retryOptions: RetryOptions = {}
 ): Promise<NetworkResponse<T>> {
+  const startTime = Date.now();
   const {
     maxRetries = 3,
     baseDelay = 1000,
     maxDelay = 10000,
     timeout = 15000,
-    retryCondition = defaultRetryCondition
+    retryCondition = defaultRetryCondition,
+    onRetry
   } = retryOptions;
 
   let lastError: any;
   let retries = 0;
+  const connectionQuality = ConnectionMonitor.getInstance().getQuality();
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     try {
-      // Create timeout controller
+      // Create timeout controller with connection-aware timeout
+      const adjustedTimeout = connectionQuality === 'slow' ? timeout * 1.5 : 
+                             connectionQuality === 'unstable' ? timeout * 2 : timeout;
+      
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      const timeoutId = setTimeout(() => controller.abort(), adjustedTimeout);
 
       // Merge abort signal with existing signal
       const signal = options.signal 
         ? AbortSignal.any([options.signal, controller.signal])
         : controller.signal;
 
-      const response = await fetch(url, {
+      // Add connection quality headers
+      const enhancedOptions: RequestInit = {
         ...options,
-        signal
-      });
+        signal,
+        headers: {
+          'X-Connection-Quality': connectionQuality,
+          'X-Retry-Attempt': attempt.toString(),
+          ...options.headers
+        }
+      };
 
+      const response = await fetch(url, enhancedOptions);
       clearTimeout(timeoutId);
 
       // Handle HTTP errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const error = new Error(errorData.error || `HTTP ${response.status}`);
+        const error = new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
         (error as any).status = response.status;
         (error as any).response = response;
         throw error;
       }
 
-      // Success - parse response
-      const data = await response.json();
+      // Success - parse response with timeout protection
+      const data = await Promise.race([
+        response.json(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('JSON parsing timeout')), 5000)
+        )
+      ]);
+
       return {
         data,
         success: true,
-        retries
+        retries,
+        duration: Date.now() - startTime
       };
 
     } catch (error: any) {
@@ -100,7 +144,13 @@ export async function networkFetch<T = any>(
       }
 
       retries++;
-      const delay = calculateDelay(attempt, baseDelay, maxDelay);
+      
+      // Call retry callback if provided
+      if (onRetry) {
+        onRetry(attempt, error);
+      }
+
+      const delay = calculateDelay(attempt, baseDelay, maxDelay, connectionQuality);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -108,11 +158,12 @@ export async function networkFetch<T = any>(
   return {
     error: lastError?.message || 'Network request failed',
     success: false,
-    retries
+    retries,
+    duration: Date.now() - startTime
   };
 }
 
-// Specialized fetch for authenticated requests
+// Enhanced specialized fetch for authenticated requests
 export async function authenticatedFetch<T = any>(
   url: string,
   token: string,
@@ -124,11 +175,25 @@ export async function authenticatedFetch<T = any>(
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
+      'X-Client-Version': '1.0.0',
+      'X-Request-ID': Math.random().toString(36).substring(7),
       ...options.headers
     }
   };
 
-  return networkFetch<T>(url, authOptions, retryOptions);
+  // Enhanced retry options for authenticated requests
+  const enhancedRetryOptions: RetryOptions = {
+    maxRetries: 4, // More retries for auth requests
+    baseDelay: 1500,
+    maxDelay: 15000,
+    timeout: 20000, // Longer timeout for auth
+    onRetry: (attempt, error) => {
+      console.warn(`Auth request retry ${attempt}:`, error.message);
+    },
+    ...retryOptions
+  };
+
+  return networkFetch<T>(url, authOptions, enhancedRetryOptions);
 }
 
 // Batch request handler with concurrency control
@@ -162,11 +227,15 @@ export async function batchRequests<T>(
   return results;
 }
 
-// Connection quality detector
+// Enhanced connection quality detector with better monitoring
 export class ConnectionMonitor {
   private static instance: ConnectionMonitor;
   private quality: 'fast' | 'slow' | 'unstable' = 'fast';
   private listeners: Array<(quality: string) => void> = [];
+  private isMonitoring = false;
+  private monitoringInterval: NodeJS.Timeout | null = null;
+  private consecutiveFailures = 0;
+  private lastTestTime = 0;
 
   static getInstance(): ConnectionMonitor {
     if (!ConnectionMonitor.instance) {
@@ -188,61 +257,131 @@ export class ConnectionMonitor {
   }
 
   async testConnection(): Promise<void> {
+    const now = Date.now();
+    
+    // Throttle tests to avoid spam
+    if (now - this.lastTestTime < 5000) return;
+    this.lastTestTime = now;
+
     const start = Date.now();
     
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       const response = await fetch('/api/health', { 
         method: 'HEAD',
-        cache: 'no-cache'
+        cache: 'no-cache',
+        signal: controller.signal,
+        headers: {
+          'X-Connection-Test': 'true'
+        }
       });
       
+      clearTimeout(timeoutId);
       const duration = Date.now() - start;
       
       if (!response.ok) {
-        this.updateQuality('unstable');
-      } else if (duration > 3000) {
-        this.updateQuality('slow');
+        this.consecutiveFailures++;
+        if (this.consecutiveFailures >= 3) {
+          this.updateQuality('unstable');
+        } else {
+          this.updateQuality('slow');
+        }
       } else {
-        this.updateQuality('fast');
+        this.consecutiveFailures = 0;
+        if (duration > 5000) {
+          this.updateQuality('slow');
+        } else if (duration > 2000) {
+          this.updateQuality(this.quality === 'fast' ? 'fast' : 'slow');
+        } else {
+          this.updateQuality('fast');
+        }
       }
-    } catch {
-      this.updateQuality('unstable');
+    } catch (error: any) {
+      this.consecutiveFailures++;
+      if (error.name === 'AbortError' || this.consecutiveFailures >= 2) {
+        this.updateQuality('unstable');
+      } else {
+        this.updateQuality('slow');
+      }
     }
   }
 
   private updateQuality(newQuality: 'fast' | 'slow' | 'unstable'): void {
     if (this.quality !== newQuality) {
+      console.log(`Connection quality changed: ${this.quality} → ${newQuality}`);
       this.quality = newQuality;
       this.listeners.forEach(callback => callback(newQuality));
     }
   }
 
   startMonitoring(interval: number = 30000): () => void {
-    const intervalId = setInterval(() => this.testConnection(), interval);
-    this.testConnection(); // Initial test
+    if (this.isMonitoring) return this.stopMonitoring;
     
-    return () => clearInterval(intervalId);
+    this.isMonitoring = true;
+    
+    // Initial test
+    this.testConnection();
+    
+    // Set up periodic testing
+    this.monitoringInterval = setInterval(() => {
+      this.testConnection();
+    }, interval);
+
+    // Monitor online/offline events
+    const handleOnline = () => {
+      console.log('Connection restored');
+      this.consecutiveFailures = 0;
+      this.testConnection();
+    };
+
+    const handleOffline = () => {
+      console.log('Connection lost');
+      this.updateQuality('unstable');
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+    }
+
+    return () => {
+      this.stopMonitoring();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      }
+    };
   }
+
+  private stopMonitoring = (): void => {
+    this.isMonitoring = false;
+    if (this.monitoringInterval) {
+      clearInterval(this.monitoringInterval);
+      this.monitoringInterval = null;
+    }
+  };
 }
 
-// React hook for network-aware requests
-export function getNetworkAwareOptions(connectionQuality: string): RetryOptions {
-  switch (connectionQuality) {
+// Get network-aware options based on connection quality
+export function getNetworkAwareOptions(quality: string = 'fast'): RetryOptions {
+  switch (quality) {
     case 'slow':
       return {
         maxRetries: 5,
         baseDelay: 2000,
-        maxDelay: 15000,
+        maxDelay: 20000,
         timeout: 30000
       };
     case 'unstable':
       return {
         maxRetries: 7,
         baseDelay: 3000,
-        maxDelay: 20000,
+        maxDelay: 30000,
         timeout: 45000
       };
-    default: // fast
+    default:
       return {
         maxRetries: 3,
         baseDelay: 1000,
@@ -250,4 +389,101 @@ export function getNetworkAwareOptions(connectionQuality: string): RetryOptions 
         timeout: 15000
       };
   }
+}
+
+// Optimistic UI helper
+export class OptimisticUpdater<T> {
+  private originalData: T;
+  private updateCallback: (data: T) => void;
+  private revertCallback: (data: T) => void;
+
+  constructor(
+    originalData: T,
+    updateCallback: (data: T) => void,
+    revertCallback: (data: T) => void
+  ) {
+    this.originalData = originalData;
+    this.updateCallback = updateCallback;
+    this.revertCallback = revertCallback;
+  }
+
+  async execute(
+    optimisticData: T,
+    asyncOperation: () => Promise<T>
+  ): Promise<T> {
+    // Apply optimistic update
+    this.updateCallback(optimisticData);
+
+    try {
+      // Execute actual operation
+      const result = await asyncOperation();
+      this.updateCallback(result);
+      return result;
+    } catch (error) {
+      // Revert on failure
+      this.revertCallback(this.originalData);
+      throw error;
+    }
+  }
+}
+
+// Enhanced error boundary for network errors
+export function isNetworkError(error: any): boolean {
+  if (!error) return false;
+  
+  const message = error.message?.toLowerCase() || '';
+  const name = error.name?.toLowerCase() || '';
+  
+  return (
+    name.includes('network') ||
+    name.includes('fetch') ||
+    message.includes('network') ||
+    message.includes('connection') ||
+    message.includes('timeout') ||
+    message.includes('dns') ||
+    error.status >= 500 ||
+    error.status === 408 ||
+    error.status === 429 ||
+    error.status === 502 ||
+    error.status === 503 ||
+    error.status === 504
+  );
+}
+
+// Graceful degradation helper
+export function withGracefulDegradation<T>(
+  primaryOperation: () => Promise<T>,
+  fallbackOperation: () => Promise<T> | T,
+  shouldFallback: (error: any) => boolean = isNetworkError
+): Promise<T> {
+  return primaryOperation().catch(async (error) => {
+    if (shouldFallback(error)) {
+      console.warn('Primary operation failed, using fallback:', error.message);
+      return await fallbackOperation();
+    }
+    throw error;
+  });
+}
+
+// Initialize connection monitoring on client side
+if (typeof window !== 'undefined') {
+  const monitor = ConnectionMonitor.getInstance();
+  monitor.startMonitoring();
+  
+  // Integrate with toast system
+  let networkToastManager: any;
+  import('./toast-utils').then(({ NetworkToastManager }) => {
+    networkToastManager = NetworkToastManager.getInstance();
+    
+    monitor.onQualityChange((quality) => {
+      if (quality === 'slow' && networkToastManager) {
+        networkToastManager.handleSlowConnection();
+      } else if (quality === 'fast' && networkToastManager) {
+        networkToastManager.handleFastConnection();
+      }
+    });
+  });
+  
+  // Expose for debugging
+  (window as any).__connectionMonitor = monitor;
 }

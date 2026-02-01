@@ -6,6 +6,8 @@ import { ArrowRight, CheckCircle2, Upload, Shield, Lock, Zap } from "lucide-reac
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { AuthAwareButton } from "@/lib/auth-routing"
+import { Suspense } from "react"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -26,6 +28,14 @@ export default function HowItWorksPage() {
   const router = useRouter()
 
   return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HowItWorksContent router={router} />
+    </Suspense>
+  )
+}
+
+function HowItWorksContent({ router }: { router: any }) {
+  return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <motion.nav
@@ -34,17 +44,17 @@ export default function HowItWorksPage() {
         transition={{ duration: 0.5 }}
         className="fixed top-0 w-full bg-background/80 backdrop-blur-md border-b border-border z-50"
       >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-foreground">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
+          <Link href="/" className="text-xl sm:text-2xl font-bold text-foreground">
             ProjectForge
           </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/auth/sign-in" className="text-foreground/70 hover:text-foreground transition font-medium">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Link href="/auth/sign-in" className="text-sm sm:text-base text-foreground/70 hover:text-foreground transition font-medium">
               Sign In
             </Link>
             <Link
               href="/auth/sign-up"
-              className="px-6 py-2 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition font-medium"
+              className="px-3 sm:px-6 py-1.5 sm:py-2 text-sm sm:text-base bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition font-medium"
             >
               Get Started
             </Link>
@@ -53,7 +63,7 @@ export default function HowItWorksPage() {
       </motion.nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 lg:px-8">
+      <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
@@ -65,7 +75,7 @@ export default function HowItWorksPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-foreground mb-4 sm:mb-6 leading-tight"
             >
               How ProjectForge Works
             </motion.h1>
@@ -74,7 +84,7 @@ export default function HowItWorksPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="text-xl text-foreground/70 mb-8 max-w-2xl mx-auto leading-relaxed"
+              className="text-base sm:text-lg md:text-xl text-foreground/70 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4"
             >
               See a real-world example of how ProjectForge verifies work and builds trust through evidence.
             </motion.p>
@@ -83,23 +93,23 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Real Example: Electrician */}
-      <section className="py-20 px-6 lg:px-8 bg-secondary/30">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-secondary/30">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
-            <div className="inline-block mb-4 px-4 py-2 bg-orange-100 rounded-full">
-              <span className="text-sm font-semibold text-orange-700 flex items-center gap-2">
-                <Zap className="w-4 h-4" />
+            <div className="inline-block mb-4 px-3 sm:px-4 py-2 bg-orange-100 rounded-full">
+              <span className="text-xs sm:text-sm font-semibold text-orange-700 flex items-center gap-2">
+                <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
                 Real Example: Electrician Job
               </span>
             </div>
-            <h2 className="text-4xl font-bold text-foreground mb-4">House Wiring Installation</h2>
-            <p className="text-foreground/60 text-lg">Complete electrical work with tamper-proof verification</p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-3 sm:mb-4">House Wiring Installation</h2>
+            <p className="text-foreground/60 text-base sm:text-lg">Complete electrical work with tamper-proof verification</p>
           </motion.div>
 
           <motion.div
@@ -107,39 +117,39 @@ export default function HowItWorksPage() {
             initial="initial"
             whileInView="animate"
             viewport={{ once: true }}
-            className="space-y-6"
+            className="space-y-4 sm:space-y-6"
           >
             {/* Step 1: Task Creation */}
             <motion.div variants={fadeInUp}>
               <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="grid md:grid-cols-2 gap-8 p-8">
+                <div className="grid md:grid-cols-2 gap-4 sm:gap-8 p-4 sm:p-8">
                   <div>
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="text-3xl font-bold text-orange-600">01</div>
+                    <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+                      <div className="text-2xl sm:text-3xl font-bold text-orange-600">01</div>
                       <div>
-                        <h3 className="text-2xl font-bold text-foreground mb-2">Task Created</h3>
-                        <p className="text-foreground/60">Electrician defines the work scope</p>
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1 sm:mb-2">Task Created</h3>
+                        <p className="text-sm sm:text-base text-foreground/60">Electrician defines the work scope</p>
                       </div>
                     </div>
-                    <div className="bg-secondary/50 rounded-lg p-4 space-y-2">
-                      <p className="text-sm">
+                    <div className="bg-secondary/50 rounded-lg p-3 sm:p-4 space-y-2">
+                      <p className="text-xs sm:text-sm">
                         <span className="font-semibold text-foreground">Job Type:</span> Electrician
                       </p>
-                      <p className="text-sm">
+                      <p className="text-xs sm:text-sm">
                         <span className="font-semibold text-foreground">Task Title:</span> House Wiring Installation
                       </p>
-                      <p className="text-sm">
+                      <p className="text-xs sm:text-sm">
                         <span className="font-semibold text-foreground">Description:</span> Completed electrical wiring
                         for a 2BHK house including switches, sockets, and safety checks.
                       </p>
-                      <p className="text-sm">
+                      <p className="text-xs sm:text-sm">
                         <span className="font-semibold text-foreground">Deadline:</span> Jan 25, 2025
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-center">
-                    <div className="p-8 rounded-lg bg-orange-50">
-                      <CheckCircle2 className="w-16 h-16 text-orange-600" />
+                  <div className="flex items-center justify-center py-4 md:py-0">
+                    <div className="p-6 sm:p-8 rounded-lg bg-orange-50">
+                      <CheckCircle2 className="w-12 h-12 sm:w-16 sm:h-16 text-orange-600" />
                     </div>
                   </div>
                 </div>
@@ -417,19 +427,19 @@ export default function HowItWorksPage() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-4xl font-bold mb-6">Ready to Get Started?</h2>
           <p className="text-lg mb-8 opacity-90">Try ProjectForge now and start verifying your work with confidence.</p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4">
+            <AuthAwareButton
+              targetPath="/dashboard/templates"
               variant="secondary"
               size="lg"
-              onClick={() => router.push("/dashboard/templates")}
-              className="flex items-center gap-2"
+              className="flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               Browse Templates
               <ArrowRight size={18} />
-            </Button>
+            </AuthAwareButton>
             <Link
               href="/auth/sign-up"
-              className="px-8 py-3 bg-primary-foreground text-primary rounded-full hover:bg-primary-foreground/90 transition font-semibold inline-flex items-center justify-center gap-2"
+              className="px-6 sm:px-8 py-3 bg-primary-foreground text-primary rounded-full hover:bg-primary-foreground/90 transition font-semibold inline-flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               Get Started Free
               <ArrowRight size={18} />
