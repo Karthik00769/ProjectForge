@@ -478,7 +478,7 @@ export default function DashboardPage() {
                             <CardTitle className="text-sm font-medium text-foreground/70">{card.title}</CardTitle>
                             <CardDescription className="text-xs">{card.description}</CardDescription>
                           </div>
-                          <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 ${card.color} flex-shrink-0`} />
+                          <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 ${card.color} shrink-0`} />
                         </CardHeader>
                         <CardContent className="pt-0">
                           <div className="space-y-1">

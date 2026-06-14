@@ -415,7 +415,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                         <div key={step.stepId || step.id} className="border border-border rounded-lg p-4">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex items-start gap-3 flex-1">
-                              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
+                              <div className="shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
                                 {index + 1}
                               </div>
                               <div className="flex-1">
@@ -441,7 +441,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                             {step.status === "completed" ? (
                               <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                                 <div className="flex items-center gap-3">
-                                  <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-green-900">Proof Uploaded</p>
                                     <p className="text-xs text-green-700">Uploaded on {formatDate(step.uploadedAt)}</p>
@@ -495,7 +495,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                         toast.error("Could not view file. You may need to sign in.");
                                       }
                                     }}
-                                    className="flex-shrink-0"
+                                    className="shrink-0"
                                   >
                                     <Eye className="w-4 h-4 mr-1" />
                                     View Files
@@ -565,7 +565,7 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                   <Card className="border-green-200 bg-green-50">
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-3 mb-4">
-                        <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+                        <CheckCircle2 className="w-6 h-6 text-green-600 shrink-0" />
                         <div>
                           <p className="font-semibold text-green-900">Task Complete</p>
                           <p className="text-sm text-green-700">
@@ -692,9 +692,9 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
 
                       {/* Shareable Link */}
                       <div className="space-y-3">
-                        <label className="text-sm font-medium text-foreground">Proof Link</label>
+                        <label htmlFor={`proof-link-${taskId}`} className="text-sm font-medium text-foreground">Proof Link</label>
                         <div className="flex gap-2">
-                          <Input value={proofShareUrl} readOnly className="text-xs" />
+                          <Input id={`proof-link-${taskId}`} aria-label="Proof link" title="Proof link" value={proofShareUrl} readOnly className="text-xs" />
                           <Button variant="outline" size="icon" onClick={copyProofLink} title="Copy to clipboard">
                             <Copy className="w-4 h-4" />
                           </Button>

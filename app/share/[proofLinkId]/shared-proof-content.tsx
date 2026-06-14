@@ -160,7 +160,7 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
                     <div key={step.id} className="border border-border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-start gap-3 flex-1">
-                          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-sm font-semibold text-green-700">
+                          <div className="shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-sm font-semibold text-green-700">
                             ✓
                           </div>
                           <div className="flex-1">
@@ -173,7 +173,7 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
                       {step.uploadedFile && (
                         <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                           <div className="flex items-center gap-3">
-                            <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                            <FileText className="w-5 h-5 text-green-600 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-green-900">{step.uploadedFile}</p>
                               <p className="text-xs text-green-700">Uploaded on {step.uploadedDate}</p>
@@ -208,7 +208,7 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
                                   alert(e.message || "Could not view file");
                                 }
                               }}
-                              className="flex-shrink-0"
+                              className="shrink-0"
                             >
                               <CheckCircle2 className="w-4 h-4 mr-2" />
                               View Proof

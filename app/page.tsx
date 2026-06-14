@@ -287,7 +287,7 @@ export default function Home() {
               <motion.div
                 key={i}
                 variants={fadeInUp}
-                className="bg-gradient-to-br from-card to-secondary/50 border border-border rounded-lg p-8 text-center hover:shadow-lg transition"
+                className="bg-linear-to-br from-card to-secondary/50 border border-border rounded-lg p-8 text-center hover:shadow-lg transition"
               >
                 <item.icon className="w-12 h-12 text-primary mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-foreground mb-2">{item.title}</h3>
