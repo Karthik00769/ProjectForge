@@ -6,6 +6,7 @@ import ProofLinkModel from "@/mongodb/models/ProofLink";
 import { verifyAuth } from "@/lib/auth-server";
 import crypto from "crypto";
 import { extractTextFromBuffer } from "@/lib/gemini";
+import { analyzeProof } from "@/lib/ai-verifier";
 import { createAuditEntry } from "@/lib/audit";
 import mongoose from "mongoose";
 
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
             fileHash: fileHash,
             fileData: buffer, // Store actual file content
             extractedText: extractedText,
+            aiVerification: { status: 'pending' }
         });
 
         // 5. Update Task Step Status
@@ -183,6 +185,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
                 });
             }
         }
+
+        // Trigger AI verification asynchronously - do NOT block the response.
+        (async () => {
+            try {
+                // Provide template steps if available for better matching
+                const Template = mongoose.models.Template || (await import("@/mongodb/models/Template")).default;
+                let templateSteps = undefined;
+                if (task.templateId && Template) {
+                    const tpl = await Template.findById(task.templateId);
+                    templateSteps = tpl?.steps || undefined;
+                }
+
+                await analyzeProof(proof._id.toString(), buffer, file.type, templateSteps);
+            } catch (aiErr) {
+                console.error("Async AI analysis failed", aiErr);
+            }
+        })();
 
         return NextResponse.json({ success: true, proof, taskStatus: task.status });
 

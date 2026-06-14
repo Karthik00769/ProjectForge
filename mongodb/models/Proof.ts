@@ -32,6 +32,16 @@ const ProofSchema = new Schema({
         type: String, // SHA-256 hash for integrity
         required: true,
     },
+    aiVerification: {
+        status: { type: String, enum: ['pending','completed','analysis_failed'], default: undefined },
+        confidence: { type: Number },
+        matchedSteps: { type: [String], default: [] },
+        missingSteps: { type: [String], default: [] },
+        summary: { type: String },
+        recommendation: { type: String },
+        model: { type: String },
+        analyzedAt: { type: Date }
+    },
     createdAt: {
         type: Date,
         default: Date.now,

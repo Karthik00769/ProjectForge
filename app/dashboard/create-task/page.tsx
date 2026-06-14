@@ -323,6 +323,8 @@ export default function CreateTaskPage() {
                             accept=".pdf,image/*"
                             onChange={handleFileInput}
                             className="absolute inset-0 opacity-0 cursor-pointer"
+                            aria-label="Upload file"
+                            title="Upload file"
                             disabled={isCreating || taskCreated}
                           />
                           <Button variant="outline" size="sm" asChild>

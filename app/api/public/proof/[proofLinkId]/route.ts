@@ -83,7 +83,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ proo
                 uploadedFile: stepProof?.fileName,
                 uploadedDate: stepProof?.createdAt,
                 proofUrl: stepProof?.fileUrl,
-                proofId: stepProof?._id // Exposed for file viewing
+                proofId: stepProof?._id, // Exposed for file viewing
+                aiVerification: stepProof?.aiVerification || null
             };
         });
 

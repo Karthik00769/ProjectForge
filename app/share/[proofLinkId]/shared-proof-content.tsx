@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import AiVerificationSummary from "@/components/ui/ai-verification"
 
 import { useState, useEffect } from "react"
 import { auth } from "@/lib/firebase"
@@ -213,6 +214,13 @@ export function SharedProofContent({ proofLinkId }: { proofLinkId: string }) {
                               View Proof
                             </Button>
                           </div>
+                        </div>
+                      )}
+                      {/* AI Verification (read-only) */}
+                      {step.aiVerification && (
+                        <div className="mt-3">
+                          {/* @ts-ignore */}
+                          <AiVerificationSummary ai={step.aiVerification} />
                         </div>
                       )}
                     </div>

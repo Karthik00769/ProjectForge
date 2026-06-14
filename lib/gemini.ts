@@ -134,3 +134,14 @@ If no text is found, return "No text detected."`;
         return "";
     }
 }
+
+// Generic call wrapper to run arbitrary contents through Gemini with fallback
+export async function callGemini(contents: any) {
+    try {
+        const result = await generateWithFallback(contents);
+        return result;
+    } catch (error) {
+        console.error("callGemini error:", error);
+        throw error;
+    }
+}

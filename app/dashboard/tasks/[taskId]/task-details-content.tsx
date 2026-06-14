@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import AiVerificationSummary from "@/components/ui/ai-verification"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -444,16 +445,24 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-green-900">Proof Uploaded</p>
                                     <p className="text-xs text-green-700">Uploaded on {formatDate(step.uploadedAt)}</p>
-                                    {/* AI Verification Badge */}
-                                    {step.extractedText && (
-                                      <div className="mt-2 text-xs bg-white/50 p-2 rounded border border-green-100 text-green-800">
-                                        <span className="font-semibold flex items-center gap-1">
-                                          <Sparkles className="w-3 h-3" />
-                                          AI Extracted Text:
-                                        </span>
-                                        <p className="line-clamp-3 mt-1 italic">{step.extractedText}</p>
+                                    {/* AI Extracted Text (optional) */}
+                                        {step.extractedText && (
+                                          <div className="mt-2 text-xs bg-white/50 p-2 rounded border border-green-100 text-green-800">
+                                            <span className="font-semibold flex items-center gap-1">
+                                              <Sparkles className="w-3 h-3" />
+                                              AI Extracted Text:
+                                            </span>
+                                            <p className="line-clamp-3 mt-1 italic">{step.extractedText}</p>
+                                          </div>
+                                        )}
+
+                                      {/* AI Verification Summary (read-only, non-actionable) */}
+                                      <div className="mt-3">
+                                        {/* lazy-safe import: component is client-only */}
+                                        {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+                                        {/* @ts-ignore */}
+                                        <AiVerificationSummary ai={step.aiVerification} />
                                       </div>
-                                    )}
                                   </div>
                                   {/* VIEW FILES BUTTON - RIGHT SIDE */}
                                   <Button
