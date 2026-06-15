@@ -55,7 +55,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
             });
 
             const response = { ...task.toObject(), steps: enrichedSteps };
-            // TEMP DEBUG LOG: print exact step shapes returned to client
+            // TEMP DEBUG LOG: print exact task response returned to client (full object)
+            try {
+                console.log("TASK API RESPONSE:", JSON.stringify(response, null, 2));
+            } catch (dbg) {
+                console.error("[DEBUG] Failed to stringify full task response:", dbg);
+            }
+            // TEMP DEBUG LOG: also print exact step shapes returned to client
             try {
                 console.log("[DEBUG GET /api/tasks/:taskId] Returning task steps keys:", JSON.stringify(response.steps.map((s: any) => ({ keys: Object.keys(s), sample: { stepId: s.stepId, id: s.id, _id: s._id, proofId: s.proofId } })), null, 2));
             } catch (dbg) {

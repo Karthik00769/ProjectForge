@@ -89,6 +89,14 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
             console.error("[DEBUG] failed to log fetched task", e);
           }
           setTask(data);
+          // RAW TASK FROM API - requested for tracing
+          try {
+            // eslint-disable-next-line no-console
+            console.log("TASK FROM API:", data);
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error("[DEBUG] failed to log TASK FROM API", e);
+          }
 
           // 2. If task completed, fetch Proof Link
           // We fetch it regardless of status if we want to be safe, but it likely only exists if completed.
@@ -161,11 +169,22 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
 
     setIsUploading(true);
     try {
-      const token = await user.getIdToken();
+        const token = await user.getIdToken();
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch(`/api/tasks/${taskId}/steps/${stepId}/upload`, {
+        // TRACE: Upload URL generation
+        try {
+          // eslint-disable-next-line no-console
+          console.log("UPLOAD URL:", `/api/tasks/${taskId}/steps/${stepId}/upload`);
+          // eslint-disable-next-line no-console
+          console.log("UPLOAD STEP ID:", stepId);
+        } catch (e) {
+          // eslint-disable-next-line no-console
+          console.error("[DEBUG] failed to log upload URL", e);
+        }
+
+        const res = await fetch(`/api/tasks/${taskId}/steps/${stepId}/upload`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -420,6 +439,14 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                   <CardContent>
                     <div className="space-y-4">
                       {task.steps.map((step: any, index: number) => {
+                        // Log the raw step object for tracing
+                        try {
+                          // eslint-disable-next-line no-console
+                          console.log("STEP OBJECT:", step);
+                        } catch (e) {
+                          // eslint-disable-next-line no-console
+                          console.error("[DEBUG] failed to log STEP OBJECT", e);
+                        }
                         const sid = step?.stepId || step?.id || String(index)
                         return (
                           <div key={sid} className="border border-border rounded-lg p-4">
@@ -527,7 +554,25 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                               )}
 
                               {step.status !== "completed" && uploadingSteps[sid] && (
-                                <Button className="w-full" size="sm" onClick={() => handleUploadSubmit(sid)} disabled={isUploading}>
+                                    <Button className="w-full" size="sm" onClick={() => {
+                                      // Trace upload click and step identity
+                                      try {
+                                        // eslint-disable-next-line no-console
+                                        console.log("UPLOAD CLICKED");
+                                        // eslint-disable-next-line no-console
+                                        console.log("STEP OBJECT AT CLICK:", step);
+                                        // eslint-disable-next-line no-console
+                                        console.log("STEP ID:", step.stepId);
+                                        // eslint-disable-next-line no-console
+                                        console.log("STEP ID FALLBACK:", step.id);
+                                        // eslint-disable-next-line no-console
+                                        console.log("STEP _ID:", step._id);
+                                      } catch (e) {
+                                        // eslint-disable-next-line no-console
+                                        console.error("[DEBUG] failed to log upload click details", e);
+                                      }
+                                      handleUploadSubmit(sid)
+                                    }} disabled={isUploading}>
                                   {isUploading ? "Uploading..." : "Mark Step Complete"}
                                 </Button>
                               )}
