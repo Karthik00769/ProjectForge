@@ -47,7 +47,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
         const fileHash = crypto.createHash("sha256").update(buffer).digest("hex");
 
         // AI Use Case 2: Basic Proof Text Extraction (OCR)
-        const extractedText = await extractTextFromBuffer(buffer, file.type);
+        // NOTE: run OCR asynchronously after saving the proof to avoid blocking uploads.
+        // Do not await extractTextFromBuffer here to prevent upload failures if OCR/Gemini is slow.
 
         // 2. "Upload" File (Mocking cloud storage URL)
         const fileUrl = `https://mock-storage.com/${authUser.uid}/${taskId}/${stepId}/${file.name}`;
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
             fileType: file.type,
             fileHash: fileHash,
             fileData: buffer, // Store actual file content
-            extractedText: extractedText,
+            extractedText: undefined,
             aiVerification: { status: 'pending' }
         });
 
@@ -195,6 +196,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tas
                 if (task.templateId && Template) {
                     const tpl = await Template.findById(task.templateId);
                     templateSteps = tpl?.steps || undefined;
+                }
+
+                // Run OCR in background and persist extracted text (non-blocking for upload)
+                try {
+                    const ocrText = await extractTextFromBuffer(buffer, file.type);
+                    if (ocrText) {
+                        try {
+                            await Proof.findByIdAndUpdate(proof._id, { $set: { extractedText: ocrText } });
+                        } catch (updErr) {
+                            console.error("Failed to update proof with OCR text", updErr);
+                        }
+                    }
+                } catch (ocrErr) {
+                    console.error("Background OCR failed", ocrErr);
                 }
 
                 await analyzeProof(proof._id.toString(), buffer, file.type, templateSteps);

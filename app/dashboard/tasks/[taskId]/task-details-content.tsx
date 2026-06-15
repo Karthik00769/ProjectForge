@@ -504,15 +504,15 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                               </div>
                             ) : (
                               <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
-                                {uploadingSteps[step.stepId] ? (
+                                {uploadingSteps[step.stepId || step.id] ? (
                                   <div className="space-y-2">
                                     <p className="text-sm font-medium text-foreground">
-                                      {uploadingSteps[step.stepId]!.name}
+                                      {uploadingSteps[step.stepId || step.id]!.name}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      {(uploadingSteps[step.stepId]!.size / 1024).toFixed(2)} KB
+                                      {(uploadingSteps[step.stepId || step.id]!.size / 1024).toFixed(2)} KB
                                     </p>
-                                    <Button variant="outline" size="sm" onClick={() => handleRemoveUpload(step.stepId)}>
+                                    <Button variant="outline" size="sm" onClick={() => handleRemoveUpload(step.stepId || step.id)}>
                                       <X className="w-4 h-4 mr-1" />
                                       Remove
                                     </Button>
@@ -527,16 +527,16 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                                       accept=".pdf,image/*"
                                       onChange={(e) => {
                                         if (e.target.files?.[0]) {
-                                          handleFileSelect(step.stepId, e.target.files[0])
+                                          handleFileSelect(step.stepId || step.id, e.target.files[0])
                                         }
                                       }}
                                       className="hidden"
-                                      id={`upload-${step.stepId}`}
+                                      id={`upload-${step.stepId || step.id}`}
                                     />
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => document.getElementById(`upload-${step.stepId}`)?.click()}
+                                      onClick={() => document.getElementById(`upload-${step.stepId || step.id}`)?.click()}
                                     >
                                       <Upload className="w-4 h-4 mr-1" />
                                       Select File
@@ -546,8 +546,8 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                               </div>
                             )}
 
-                            {step.status !== "completed" && uploadingSteps[step.stepId] && (
-                              <Button className="w-full" size="sm" onClick={() => handleUploadSubmit(step.stepId)} disabled={isUploading}>
+                            {step.status !== "completed" && uploadingSteps[step.stepId || step.id] && (
+                              <Button className="w-full" size="sm" onClick={() => handleUploadSubmit(step.stepId || step.id)} disabled={isUploading}>
                                 {isUploading ? "Uploading..." : "Mark Step Complete"}
                               </Button>
                             )}
