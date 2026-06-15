@@ -29,8 +29,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
         try {
             const proofs = await Proof.find({ taskId: task._id });
 
-            // Merge aiVerification (if present) into task.steps for client convenience
-            const enrichedSteps = (task.steps || []).map((s: any) => {
+            // Ensure we work from a plain JS object so subdocuments aren't returned as Mongoose objects
+            const taskObj = task.toObject();
+            // Merge aiVerification (if present) into taskObj.steps for client convenience
+            const enrichedSteps = (taskObj.steps || []).map((s: any) => {
                 const stepCopy = { ...s };
                 try {
                     if (s.proofId) {
@@ -54,7 +56,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
                 return stepCopy;
             });
 
-            const response = { ...task.toObject(), steps: enrichedSteps };
+            const response = { ...taskObj, steps: enrichedSteps };
             // TEMP DEBUG LOG: print exact task response returned to client (full object)
             try {
                 console.log("TASK API RESPONSE:", JSON.stringify(response, null, 2));
@@ -70,7 +72,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ task
             return NextResponse.json(response);
         } catch (e) {
             console.error("Failed to enrich task with proofs:", e);
-            return NextResponse.json(task);
+            // Return a plain object representation even on error to avoid exposing Mongoose internals
+            try {
+                return NextResponse.json(task.toObject());
+            } catch (toErr) {
+                return NextResponse.json({ error: "Failed to fetch task" }, { status: 500 });
+            }
         }
     } catch (error) {
         console.error("Error fetching task:", error);
