@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { toast } from "sonner"
@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import AiVerificationSummary from "@/components/ui/ai-verification"
+import { auth } from "@/lib/firebase"
+import { useAuth } from "@/contexts/AuthContext"
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -20,7 +22,7 @@ const fadeInUp = {
   transition: { duration: 0.5 },
 }
 
-import { auth } from "@/lib/firebase"
+// Helper to format date - ensures proper 4-digit year display
 
 // Helper to format date - ensures proper 4-digit year display
 const formatDate = (dateString?: string | Date) => {
@@ -42,8 +44,6 @@ const formatDate = (dateString?: string | Date) => {
   }
 }
 
-import { useEffect } from "react"
-import { useAuth } from "@/contexts/AuthContext"
 
 export function TaskDetailsContent({ taskId }: { taskId: string }) {
   const router = useRouter()
@@ -80,6 +80,14 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
         });
         if (resTask.ok) {
           const data = await resTask.json();
+          // TEMP DEBUG: log fetched task shape and steps
+          try {
+            // eslint-disable-next-line no-console
+            console.log("[DEBUG fetchTaskAndLink] fetched task:", { taskId, stepsPreview: Array.isArray(data?.steps) ? data.steps.map((s: any) => ({ keys: Object.keys(s), sample: { stepId: s.stepId, id: s.id, _id: s._id, proofId: s.proofId } })) : data?.steps });
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error("[DEBUG] failed to log fetched task", e);
+          }
           setTask(data);
 
           // 2. If task completed, fetch Proof Link
@@ -411,149 +419,122 @@ export function TaskDetailsContent({ taskId }: { taskId: string }) {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {task.steps.map((step: any, index: number) => (
-                        <div key={step.stepId || step.id} className="border border-border rounded-lg p-4">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-start gap-3 flex-1">
-                              <div className="shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
-                                {index + 1}
-                              </div>
-                              <div className="flex-1">
-                                {/* Use template data logic if name is missing in task steps? Ideally backend populated it. 
-                                    Our Task model has steps with stepId vs name. 
-                                    Wait, the Task model steps array only had { stepId, status, proofId }. 
-                                    We need to ideally Populate step details from Template or store them in Task.
-                                    For now, we might be missing step names if we didn't store them in Task.
-                                    Let's check Route.ts -> "const taskSteps = template.steps.map(...)".
-                                    The created task in DB only has stepId. 
-                                    We should probably store 'name' in Task steps to avoid double lookups or populate.
-                                    Assumption: Backend now returns enriched steps or we need to fix backend? 
-                                    Let's assume for now we might see "Step {index+1}" if name missing, 
-                                    BUT we should fix backend to store name. 
-                                    For this step, let's use step.stepId as fallback. */}
-                                <h4 className="font-semibold text-foreground">{step.name || `Step ${index + 1}`}</h4>
-                                <div className="flex items-center gap-2 mt-1">{getStepStatusBadge(step.status)}</div>
+                      {task.steps.map((step: any, index: number) => {
+                        const sid = step?.stepId || step?.id || String(index)
+                        return (
+                          <div key={sid} className="border border-border rounded-lg p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className="shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-semibold">
+                                  {index + 1}
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-foreground">{step.name || `Step ${index + 1}`}</h4>
+                                  <div className="flex items-center gap-2 mt-1">{getStepStatusBadge(step.status)}</div>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="mt-4 space-y-3">
-                            {step.status === "completed" ? (
-                              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-green-900">Proof Uploaded</p>
-                                    <p className="text-xs text-green-700">Uploaded on {formatDate(step.uploadedAt)}</p>
-                                    {/* AI Extracted Text (optional) */}
-                                        {step.extractedText && (
-                                          <div className="mt-2 text-xs bg-white/50 p-2 rounded border border-green-100 text-green-800">
-                                            <span className="font-semibold flex items-center gap-1">
-                                              <Sparkles className="w-3 h-3" />
-                                              AI Extracted Text:
-                                            </span>
-                                            <p className="line-clamp-3 mt-1 italic">{step.extractedText}</p>
-                                          </div>
-                                        )}
-
-                                      {/* AI Verification Summary (read-only, non-actionable) */}
+                            <div className="mt-4 space-y-3">
+                              {step.status === "completed" ? (
+                                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-green-900">Proof Uploaded</p>
+                                      <p className="text-xs text-green-700">Uploaded on {formatDate(step.uploadedAt)}</p>
+                                      {step.extractedText && (
+                                        <div className="mt-2 text-xs bg-white/50 p-2 rounded border border-green-100 text-green-800">
+                                          <span className="font-semibold flex items-center gap-1">
+                                            <Sparkles className="w-3 h-3" />
+                                            AI Extracted Text:
+                                          </span>
+                                          <p className="line-clamp-3 mt-1 italic">{step.extractedText}</p>
+                                        </div>
+                                      )}
                                       <div className="mt-3">
-                                        {/* lazy-safe import: component is client-only */}
                                         {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
                                         {/* @ts-ignore */}
                                         <AiVerificationSummary ai={step.aiVerification} />
                                       </div>
-                                  </div>
-                                  {/* VIEW FILES BUTTON - RIGHT SIDE */}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={async () => {
-                                      if (!step.proofId) {
-                                        toast.error("Proof file not found");
-                                        return;
-                                      }
-
-                                      try {
-                                        const headers: Record<string, string> = {};
-                                        if (user) {
-                                          const token = await user.getIdToken();
-                                          headers["Authorization"] = `Bearer ${token}`;
-                                        }
-
-                                        const res = await fetch(`/api/proof/${step.proofId}/raw`, { headers });
-                                        if (!res.ok) throw new Error("Failed to load file");
-
-                                        const blob = await res.blob();
-                                        const url = window.URL.createObjectURL(blob);
-                                        window.open(url, '_blank');
-
-                                        // Cleanup after a delay to ensure new tab loads
-                                        setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-                                      } catch (e) {
-                                        console.error(e);
-                                        toast.error("Could not view file. You may need to sign in.");
-                                      }
-                                    }}
-                                    className="shrink-0"
-                                  >
-                                    <Eye className="w-4 h-4 mr-1" />
-                                    View Files
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
-                                {uploadingSteps[step.stepId || step.id] ? (
-                                  <div className="space-y-2">
-                                    <p className="text-sm font-medium text-foreground">
-                                      {uploadingSteps[step.stepId || step.id]!.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {(uploadingSteps[step.stepId || step.id]!.size / 1024).toFixed(2)} KB
-                                    </p>
-                                    <Button variant="outline" size="sm" onClick={() => handleRemoveUpload(step.stepId || step.id)}>
-                                      <X className="w-4 h-4 mr-1" />
-                                      Remove
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2">
-                                    <Upload className="w-6 h-6 mx-auto text-muted-foreground" />
-                                    <p className="text-sm text-foreground font-medium">Upload Proof</p>
-                                    <p className="text-xs text-muted-foreground">Click to select photo or PDF</p>
-                                    <input
-                                      type="file"
-                                      accept=".pdf,image/*"
-                                      onChange={(e) => {
-                                        if (e.target.files?.[0]) {
-                                          handleFileSelect(step.stepId || step.id, e.target.files[0])
-                                        }
-                                      }}
-                                      className="hidden"
-                                      id={`upload-${step.stepId || step.id}`}
-                                    />
+                                    </div>
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => document.getElementById(`upload-${step.stepId || step.id}`)?.click()}
+                                      onClick={async () => {
+                                        if (!step.proofId) {
+                                          toast.error("Proof file not found");
+                                          return
+                                        }
+                                        try {
+                                          const headers: Record<string, string> = {}
+                                          if (user) {
+                                            const token = await user.getIdToken()
+                                            headers["Authorization"] = `Bearer ${token}`
+                                          }
+                                          const res = await fetch(`/api/proof/${step.proofId}/raw`, { headers })
+                                          if (!res.ok) throw new Error("Failed to load file")
+                                          const blob = await res.blob()
+                                          const url = window.URL.createObjectURL(blob)
+                                          window.open(url, "_blank")
+                                          setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+                                        } catch (e) {
+                                          console.error(e)
+                                          toast.error("Could not view file. You may need to sign in.")
+                                        }
+                                      }}
+                                      className="shrink-0"
                                     >
-                                      <Upload className="w-4 h-4 mr-1" />
-                                      Select File
+                                      <Eye className="w-4 h-4 mr-1" />
+                                      View Files
                                     </Button>
                                   </div>
-                                )}
-                              </div>
-                            )}
+                                </div>
+                              ) : (
+                                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+                                  {uploadingSteps[sid] ? (
+                                    <div className="space-y-2">
+                                      <p className="text-sm font-medium text-foreground">{uploadingSteps[sid]!.name}</p>
+                                      <p className="text-xs text-muted-foreground">{(uploadingSteps[sid]!.size / 1024).toFixed(2)} KB</p>
+                                      <Button variant="outline" size="sm" onClick={() => handleRemoveUpload(sid)}>
+                                        <X className="w-4 h-4 mr-1" />
+                                        Remove
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <Upload className="w-6 h-6 mx-auto text-muted-foreground" />
+                                      <p className="text-sm text-foreground font-medium">Upload Proof</p>
+                                      <p className="text-xs text-muted-foreground">Click to select photo or PDF</p>
+                                      <input
+                                        type="file"
+                                        accept=".pdf,image/*"
+                                        onChange={(e) => {
+                                          if (e.target.files?.[0]) {
+                                            handleFileSelect(sid, e.target.files[0])
+                                          }
+                                        }}
+                                        className="hidden"
+                                        id={`upload-${sid}`}
+                                      />
+                                      <Button variant="outline" size="sm" onClick={() => document.getElementById(`upload-${sid}`)?.click()}>
+                                        <Upload className="w-4 h-4 mr-1" />
+                                        Select File
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
-                            {step.status !== "completed" && uploadingSteps[step.stepId || step.id] && (
-                              <Button className="w-full" size="sm" onClick={() => handleUploadSubmit(step.stepId || step.id)} disabled={isUploading}>
-                                {isUploading ? "Uploading..." : "Mark Step Complete"}
-                              </Button>
-                            )}
+                              {step.status !== "completed" && uploadingSteps[sid] && (
+                                <Button className="w-full" size="sm" onClick={() => handleUploadSubmit(sid)} disabled={isUploading}>
+                                  {isUploading ? "Uploading..." : "Mark Step Complete"}
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </CardContent>
                 </Card>
