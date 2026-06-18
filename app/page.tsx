@@ -93,8 +93,8 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="text-xl text-foreground/70 mb-8 max-w-2xl mx-auto leading-relaxed"
             >
-              No fake progress. Upload proof, verify integrity, and maintain permanent audit records. ProjectForge
-              ensures transparent, tamper-proof work verification.
+              No fake progress. Create custom tasks and steps, upload evidence, and use AI verification with
+              confidence scores to maintain permanent, auditable records and accountable progress.
             </motion.p>
 
             <motion.div
@@ -143,10 +143,26 @@ export default function Home() {
             className="grid md:grid-cols-4 gap-6"
           >
             {[
-              { num: "01", title: "Create Task", desc: "Define your task or project with clear objectives" },
-              { num: "02", title: "Upload Proof", desc: "Attach images, documents, or evidence files" },
-              { num: "03", title: "Verify Integrity", desc: "System validates authenticity and detects tampering" },
-              { num: "04", title: "Audit Record", desc: "Permanent, immutable record is generated" },
+              {
+                num: "01",
+                title: "Create Goals & Tasks",
+                desc: "Create goals, generate tasks with AI, or build fully custom tasks and steps.",
+              },
+              {
+                num: "02",
+                title: "Upload Evidence",
+                desc: "Submit screenshots, documents, PDFs, images, links, and other proof of completion.",
+              },
+              {
+                num: "03",
+                title: "AI Verification",
+                desc: "AI analyzes uploaded evidence, generates summaries, and assigns confidence scores.",
+              },
+              {
+                num: "04",
+                title: "Accountability Record",
+                desc: "Track verified progress, review evidence history, and maintain an auditable record of work.",
+              },
             ].map((step, i) => (
               <motion.div
                 key={i}
@@ -187,19 +203,23 @@ export default function Home() {
               {
                 icon: CheckCircle2,
                 title: "No Fake Progress",
-                desc: "Real evidence, real verification, real accountability",
+                desc: "Real evidence, AI-assisted verification, and clear accountability",
               },
               {
                 icon: Shield,
                 title: "Tamper Detection",
-                desc: "Advanced algorithms detect any unauthorized modifications",
+                desc: "Advanced algorithms detect unauthorized modifications and validate file integrity",
               },
               {
                 icon: BarChart3,
                 title: "Evidence-Based Tracking",
-                desc: "Track work with concrete proof instead of claims",
+                desc: "Track work with concrete proof, AI summaries, and confidence scoring",
               },
-              { icon: Lock, title: "Secure & Transparent", desc: "Privacy-first design with full transparency" },
+              {
+                icon: Lock,
+                title: "Secure & Transparent",
+                desc: "Privacy-first design with support for custom workflows and human review",
+              },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -240,8 +260,16 @@ export default function Home() {
               { icon: Users, title: "Skilled Workers", desc: "Showcase your work with verifiable proof" },
               { icon: BarChart3, title: "Businesses", desc: "Monitor team progress with evidence" },
               { icon: CheckCircle2, title: "Freelancers", desc: "Build trust with clients instantly" },
-              { icon: Shield, title: "Professionals", desc: "Document achievements authentically" },
-              { icon: Lock, title: "Students", desc: "Verify learning and project completion" },
+              {
+                icon: Shield,
+                title: "Professionals",
+                desc: "Document achievements and goal execution with evidence-backed, accountable progress",
+              },
+              {
+                icon: Lock,
+                title: "Students",
+                desc: "Verify learning and goal execution with evidence-backed progress and accountability",
+              },
               { icon: Users, title: "Enterprises", desc: "Enterprise-grade work verification" },
             ].map((item, i) => (
               <motion.div
@@ -280,9 +308,21 @@ export default function Home() {
             className="grid md:grid-cols-3 gap-8"
           >
             {[
-              { title: "Audit Logs", desc: "Complete history of all actions and changes", icon: BarChart3 },
-              { title: "File Integrity Checks", desc: "Cryptographic verification of all uploads", icon: Shield },
-              { title: "Privacy-First Design", desc: "Your data stays yours with zero tracking", icon: Lock },
+              {
+                title: "Audit Logs",
+                desc: "Complete history of all actions and changes, including AI verification summaries and confidence scores. AI-generated verification is designed to assist users, while final decisions remain under human control.",
+                icon: BarChart3,
+              },
+              {
+                title: "File Integrity Checks",
+                desc: "Cryptographic verification of all uploads, with tamper detection and validation",
+                icon: Shield,
+              },
+              {
+                title: "Privacy-First Design",
+                desc: "Your data stays yours with zero tracking; supports human review and custom verification workflows",
+                icon: Lock,
+              },
             ].map((item, i) => (
               <motion.div
                 key={i}
